@@ -1,0 +1,17 @@
+pandas
+numpy
+scipy
+requests
+httpx
+pydantic
+python-dotenv
+plotly
+streamlit
+beautifulsoup4
+lxml
+pyarrow
+pytest
+pytest-cov
+hypothesis
+ruff
+mypy
