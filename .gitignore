@@ -18,6 +18,34 @@ outputs/*
 !data/processed/.gitkeep
 !outputs/.gitkeep
 
+# Approved ECB source datasets required by the cloud pipeline.
+!data/raw/ecb/
+data/raw/ecb/*
+!data/raw/ecb/estr_rate.csv
+!data/raw/ecb/deposit_facility_rate.csv
+!data/raw/ecb/estr_total_volume.csv
+!data/raw/ecb/estr_rate_25th_percentile.csv
+!data/raw/ecb/estr_rate_75th_percentile.csv
+!data/raw/ecb/estr_active_banks.csv
+!data/raw/ecb/estr_transaction_count.csv
+
+# Approved sovereign source datasets.
+!data/raw/sovereign/
+data/raw/sovereign/*
+!data/raw/sovereign/germany_benchmark_yields.csv
+
+# Approved processed funding datasets.
+!data/processed/funding/
+data/processed/funding/*
+!data/processed/funding/estr_funding_conditions.csv
+!data/processed/funding/estr_policy_spread.csv
+!data/processed/funding/estr_market_quality.csv
+
+# Approved application outputs.
+!outputs/morning_sheet/
+outputs/morning_sheet/*
+!outputs/morning_sheet/repolens_morning_sheet.csv
+
 .DS_Store
 Thumbs.db
 .vscode/

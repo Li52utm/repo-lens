@@ -1,0 +1,117 @@
+name: Refresh RepoLens Data
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "15 19 * * 1-5"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repolens-data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh-data:
+    name: Test, refresh and publish datasets
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Run automated tests before refresh
+        run: |
+          python -m pytest
+
+      - name: Create approved data directories
+        run: |
+          mkdir -p data/raw/ecb
+          mkdir -p data/raw/sovereign
+          mkdir -p data/processed/funding
+          mkdir -p outputs/morning_sheet
+
+      - name: Download official ECB datasets
+        run: |
+          python -m src.download_estr
+          python -m src.download_deposit_facility_rate
+          python -m src.download_estr_market_quality
+
+      - name: Build euro funding analytics
+        run: |
+          python -m src.run_funding_conditions
+          python -m src.run_estr_policy_spread
+          python -m src.run_estr_market_quality
+          python -m src.run_morning_sheet
+
+      - name: Download official German benchmark yields
+        run: |
+          python -m src.download_german_benchmark_yields
+
+      - name: Run automated tests after refresh
+        run: |
+          python -m pytest
+
+      - name: Verify required deployment datasets
+        run: |
+          test -s data/raw/ecb/estr_rate.csv
+          test -s data/raw/ecb/deposit_facility_rate.csv
+          test -s data/raw/ecb/estr_total_volume.csv
+          test -s data/raw/ecb/estr_rate_25th_percentile.csv
+          test -s data/raw/ecb/estr_rate_75th_percentile.csv
+          test -s data/raw/ecb/estr_active_banks.csv
+          test -s data/raw/ecb/estr_transaction_count.csv
+          test -s data/raw/sovereign/germany_benchmark_yields.csv
+          test -s data/processed/funding/estr_funding_conditions.csv
+          test -s data/processed/funding/estr_policy_spread.csv
+          test -s data/processed/funding/estr_market_quality.csv
+          test -s outputs/morning_sheet/repolens_morning_sheet.csv
+
+      - name: Commit refreshed datasets
+        shell: bash
+        run: |
+          git config user.name "repolens-data-bot"
+          git config user.email "repolens-data-bot@users.noreply.github.com"
+
+          git add \
+            data/raw/ecb/estr_rate.csv \
+            data/raw/ecb/deposit_facility_rate.csv \
+            data/raw/ecb/estr_total_volume.csv \
+            data/raw/ecb/estr_rate_25th_percentile.csv \
+            data/raw/ecb/estr_rate_75th_percentile.csv \
+            data/raw/ecb/estr_active_banks.csv \
+            data/raw/ecb/estr_transaction_count.csv \
+            data/raw/sovereign/germany_benchmark_yields.csv \
+            data/processed/funding/estr_funding_conditions.csv \
+            data/processed/funding/estr_policy_spread.csv \
+            data/processed/funding/estr_market_quality.csv \
+            outputs/morning_sheet/repolens_morning_sheet.csv
+
+          if git diff --cached --quiet; then
+            echo "No dataset changes detected."
+            exit 0
+          fi
+
+          git commit \
+            -m "Refresh RepoLens market data $(date -u +'%Y-%m-%d')"
+
+          git push
