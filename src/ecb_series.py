@@ -25,7 +25,30 @@ ESTR_RATE: Final[ECBSeriesDefinition] = ECBSeriesDefinition(
     unit="Percent per annum",
     classification="Official",
     description=(
-        "Wholesale unsecured overnight euro "
-        "borrowing costs of euro-area banks."
+        "Wholesale unsecured overnight euro borrowing "
+        "costs of euro-area banks."
     ),
+)
+
+
+ECB_DEPOSIT_FACILITY_RATE: Final[ECBSeriesDefinition] = (
+    ECBSeriesDefinition(
+        name="ECB deposit facility rate",
+        dataflow="FM",
+        series_key="B.U2.EUR.4F.KR.DFR.LEV",
+        unit="Percent per annum",
+        classification="Official",
+        description=(
+            "ECB deposit facility policy rate, recorded "
+            "on official rate-change dates."
+        ),
+    )
+)
+
+
+APPROVED_ECB_SERIES: Final[
+    tuple[ECBSeriesDefinition, ...]
+] = (
+    ESTR_RATE,
+    ECB_DEPOSIT_FACILITY_RATE,
 )
