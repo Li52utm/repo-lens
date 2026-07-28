@@ -295,6 +295,11 @@ def main() -> None:
                 title="Bond Terminal",
                 icon=":material/account_balance:",
             ),
+            st.Page(
+                "app_pages/sovereign_relative_value_page.py",
+                title="Relative Value Monitor",
+                icon=":material/compare_arrows:",
+            ),
         ],
     }
 
