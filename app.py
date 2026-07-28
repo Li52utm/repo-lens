@@ -231,16 +231,16 @@ def render_shared_sidebar() -> None:
     )
 
     st.sidebar.write(
-        "Euro money-market funding, policy transmission "
-        "and market-quality intelligence."
+        "Euro money-market funding, policy transmission, "
+        "sovereign valuation and relative-value intelligence."
     )
 
     st.sidebar.markdown(
-        "**Data source**"
+        "**Primary data sources**"
     )
 
     st.sidebar.write(
-        "European Central Bank"
+        "European Central Bank and Deutsche Bundesbank"
     )
 
     st.sidebar.markdown(
@@ -248,7 +248,8 @@ def render_shared_sidebar() -> None:
     )
 
     st.sidebar.write(
-        "Official inputs with RepoLens-derived analytics"
+        "Official and desk-supplied inputs with "
+        "RepoLens-derived analytics"
     )
 
     configured_password = read_optional_password()
@@ -286,6 +287,13 @@ def main() -> None:
                 "app_pages/risk_monitor_page.py",
                 title="Risk Monitor",
                 icon=":material/shield:",
+            ),
+        ],
+        "Sovereign Markets": [
+            st.Page(
+                "app_pages/sovereign_bond_terminal_page.py",
+                title="Bond Terminal",
+                icon=":material/account_balance:",
             ),
         ],
     }
