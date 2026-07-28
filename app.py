@@ -232,7 +232,8 @@ def render_shared_sidebar() -> None:
 
     st.sidebar.write(
         "Euro money-market funding, policy transmission, "
-        "sovereign valuation and relative-value intelligence."
+        "sovereign valuation, portfolio risk and "
+        "relative-value intelligence."
     )
 
     st.sidebar.markdown(
@@ -299,6 +300,11 @@ def main() -> None:
                 "app_pages/sovereign_relative_value_page.py",
                 title="Relative Value Monitor",
                 icon=":material/compare_arrows:",
+            ),
+            st.Page(
+                "app_pages/sovereign_portfolio_page.py",
+                title="Portfolio Risk Book",
+                icon=":material/menu_book:",
             ),
         ],
     }
