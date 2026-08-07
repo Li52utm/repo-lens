@@ -18,13 +18,17 @@ from src.sovereign_instruments import (
     SOVEREIGN_INSTRUMENTS,
     SovereignCountry,
     SovereignInstrument,
-    get_instrument,
 )
 
 
 DEFAULT_POSITION_NOTIONAL_EUR: Final[float] = 10_000_000.0
 
-DEFAULT_SCENARIO_SHOCKS_BP: Final[tuple[float, ...]] = (
+DEFAULT_SCENARIO_SHOCKS_BP: Final[
+    tuple[
+        float,
+        ...,
+    ]
+] = (
     -25.0,
     -10.0,
     -5.0,
@@ -40,7 +44,9 @@ class SovereignSnapshotError(RuntimeError):
     """
 
 
-class SovereignSnapshotValidationError(SovereignSnapshotError):
+class SovereignSnapshotValidationError(
+    SovereignSnapshotError
+):
     """
     Raised when snapshot inputs fail validation.
     """
@@ -71,7 +77,9 @@ class SovereignYieldInput:
     yield_percent: float
     observation_date: date
     source_name: str = "Desk input"
-    data_status: SnapshotDataStatus = SnapshotDataStatus.DESK_INPUT
+    data_status: SnapshotDataStatus = (
+        SnapshotDataStatus.DESK_INPUT
+    )
 
     def __post_init__(self) -> None:
         if len(
@@ -108,6 +116,10 @@ class SovereignYieldInput:
 class SovereignSnapshotResult:
     """
     Store one complete instrument-level valuation snapshot.
+
+    german_benchmark_yield_percent and spread_to_germany_bp may contain
+    NaN when no exact permitted German benchmark observation exists for
+    the instrument's maturity sector.
     """
 
     isin: str
@@ -158,10 +170,11 @@ def prepare_german_benchmark_curve(
     benchmark_data: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Prepare the latest official German yield for every tenor.
+    Prepare the latest official German yield for every available tenor.
 
-    The returned dataframe preserves country_code so it can safely be
-    passed through this validation function more than once.
+    RepoLens does not interpolate missing tenors in this function.
+    The returned frame therefore contains only observations supplied by
+    the approved German benchmark dataset.
     """
     required_columns = {
         "observation_date",
@@ -187,31 +200,52 @@ def prepare_german_benchmark_curve(
 
     prepared = benchmark_data.copy()
 
-    prepared["observation_date"] = pd.to_datetime(
-        prepared["observation_date"],
+    prepared[
+        "observation_date"
+    ] = pd.to_datetime(
+        prepared[
+            "observation_date"
+        ],
         errors="coerce",
     )
 
-    prepared["tenor_years"] = pd.to_numeric(
-        prepared["tenor_years"],
+    prepared[
+        "tenor_years"
+    ] = pd.to_numeric(
+        prepared[
+            "tenor_years"
+        ],
         errors="coerce",
     )
 
-    prepared["yield_percent"] = pd.to_numeric(
-        prepared["yield_percent"],
+    prepared[
+        "yield_percent"
+    ] = pd.to_numeric(
+        prepared[
+            "yield_percent"
+        ],
         errors="coerce",
     )
 
-    prepared["country_code"] = (
-        prepared["country_code"]
-        .astype(str)
+    prepared[
+        "country_code"
+    ] = (
+        prepared[
+            "country_code"
+        ]
+        .astype(
+            str
+        )
         .str.strip()
         .str.upper()
     )
 
     prepared = prepared.loc[
-        prepared["country_code"]
-        .eq("DE")
+        prepared[
+            "country_code"
+        ].eq(
+            "DE"
+        )
     ]
 
     prepared = prepared.dropna(
@@ -230,14 +264,24 @@ def prepare_german_benchmark_curve(
             "German benchmark data contains no valid observations."
         )
 
-    prepared["tenor_years"] = (
-        prepared["tenor_years"]
-        .astype(int)
+    prepared[
+        "tenor_years"
+    ] = (
+        prepared[
+            "tenor_years"
+        ]
+        .astype(
+            int
+        )
     )
 
     invalid_tenors = (
-        prepared["tenor_years"]
-        .le(0)
+        prepared[
+            "tenor_years"
+        ]
+        .le(
+            0
+        )
     )
 
     if invalid_tenors.any():
@@ -246,10 +290,16 @@ def prepare_german_benchmark_curve(
         )
 
     invalid_yields = (
-        prepared["yield_percent"]
-        .le(-100.0)
-        | prepared["yield_percent"]
-        .gt(100.0)
+        prepared[
+            "yield_percent"
+        ].le(
+            -100.0
+        )
+        | prepared[
+            "yield_percent"
+        ].gt(
+            100.0
+        )
     )
 
     if invalid_yields.any():
@@ -269,7 +319,9 @@ def prepare_german_benchmark_curve(
             "tenor_years",
             as_index=False,
         )
-        .tail(1)
+        .tail(
+            1
+        )
         .sort_values(
             "tenor_years"
         )
@@ -279,7 +331,9 @@ def prepare_german_benchmark_curve(
     )
 
     duplicate_tenors = (
-        latest_curve["tenor_years"]
+        latest_curve[
+            "tenor_years"
+        ]
         .duplicated()
         .any()
     )
@@ -301,25 +355,31 @@ def prepare_german_benchmark_curve(
     ]
 
 
-def german_benchmark_for_tenor(
+def optional_german_benchmark_for_tenor(
     prepared_curve: pd.DataFrame,
     tenor_years: int,
-) -> pd.Series:
+) -> pd.Series | None:
     """
-    Return the latest German benchmark observation for one tenor.
+    Return an exact German benchmark observation when available.
+
+    Missing maturity sectors return None. RepoLens does not interpolate
+    or manufacture a German benchmark yield.
     """
+    if tenor_years <= 0:
+        raise SovereignSnapshotValidationError(
+            "tenor_years must be positive."
+        )
+
     matches = prepared_curve.loc[
-        prepared_curve["tenor_years"]
-        .eq(
+        prepared_curve[
+            "tenor_years"
+        ].eq(
             tenor_years
         )
     ]
 
     if matches.empty:
-        raise SovereignSnapshotValidationError(
-            "No German benchmark yield is available for "
-            f"{tenor_years}Y."
-        )
+        return None
 
     if len(
         matches
@@ -329,7 +389,33 @@ def german_benchmark_for_tenor(
             f"{tenor_years}Y."
         )
 
-    return matches.iloc[0]
+    return matches.iloc[
+        0
+    ]
+
+
+def german_benchmark_for_tenor(
+    prepared_curve: pd.DataFrame,
+    tenor_years: int,
+) -> pd.Series:
+    """
+    Return the latest exact German benchmark observation for one tenor.
+
+    This strict helper is retained for callers that explicitly require
+    an exact benchmark.
+    """
+    benchmark = optional_german_benchmark_for_tenor(
+        prepared_curve=prepared_curve,
+        tenor_years=tenor_years,
+    )
+
+    if benchmark is None:
+        raise SovereignSnapshotValidationError(
+            "No German benchmark yield is available for "
+            f"{tenor_years}Y."
+        )
+
+    return benchmark
 
 
 def validate_valuation_date(
@@ -361,13 +447,29 @@ def metrics_to_snapshot(
 ) -> SovereignSnapshotResult:
     """
     Convert bond analytics into the standard snapshot contract.
+
+    A missing exact German benchmark is represented by NaN rather than
+    an interpolated or proxy observation.
     """
     yield_percent = (
         metrics.yield_to_maturity
         * 100.0
     )
 
-    if instrument.country == SovereignCountry.GERMANY:
+    german_benchmark_available = bool(
+        np.isfinite(
+            german_benchmark_yield_percent
+        )
+    )
+
+    if not german_benchmark_available:
+        spread_to_germany_bp = float(
+            "nan"
+        )
+    elif (
+        instrument.country
+        == SovereignCountry.GERMANY
+    ):
         spread_to_germany_bp = 0.0
     else:
         spread_to_germany_bp = (
@@ -376,25 +478,41 @@ def metrics_to_snapshot(
         ) * 100.0
 
     position_dv01_eur = position_dv01(
-        dv01_per_100_value=metrics.dv01_per_100,
-        position_notional=position_notional_eur,
+        dv01_per_100_value=(
+            metrics.dv01_per_100
+        ),
+        position_notional=(
+            position_notional_eur
+        ),
     )
 
     dv01_per_eur_1m = position_dv01(
-        dv01_per_100_value=metrics.dv01_per_100,
-        position_notional=1_000_000.0,
+        dv01_per_100_value=(
+            metrics.dv01_per_100
+        ),
+        position_notional=(
+            1_000_000.0
+        ),
     )
 
     return SovereignSnapshotResult(
         isin=instrument.isin,
-        display_name=instrument.display_name,
-        country=instrument.country.value,
-        security_type=instrument.security_type.value,
+        display_name=(
+            instrument.display_name
+        ),
+        country=(
+            instrument.country.value
+        ),
+        security_type=(
+            instrument.security_type.value
+        ),
         benchmark_tenor_years=(
             instrument.benchmark_tenor_years
         ),
         observation_date=observation_date,
-        settlement_date=metrics.settlement_date,
+        settlement_date=(
+            metrics.settlement_date
+        ),
         source_name=source_name,
         data_status=data_status,
         market_data_available=True,
@@ -402,17 +520,39 @@ def metrics_to_snapshot(
         german_benchmark_yield_percent=(
             german_benchmark_yield_percent
         ),
-        spread_to_germany_bp=spread_to_germany_bp,
-        clean_price=metrics.clean_price,
-        dirty_price=metrics.dirty_price,
-        accrued_interest=metrics.accrued_interest,
-        modified_duration=metrics.modified_duration,
-        macaulay_duration=metrics.macaulay_duration,
-        convexity=metrics.convexity,
-        dv01_per_100=metrics.dv01_per_100,
-        dv01_per_eur_1m=dv01_per_eur_1m,
-        position_notional_eur=position_notional_eur,
-        position_dv01_eur=position_dv01_eur,
+        spread_to_germany_bp=(
+            spread_to_germany_bp
+        ),
+        clean_price=(
+            metrics.clean_price
+        ),
+        dirty_price=(
+            metrics.dirty_price
+        ),
+        accrued_interest=(
+            metrics.accrued_interest
+        ),
+        modified_duration=(
+            metrics.modified_duration
+        ),
+        macaulay_duration=(
+            metrics.macaulay_duration
+        ),
+        convexity=(
+            metrics.convexity
+        ),
+        dv01_per_100=(
+            metrics.dv01_per_100
+        ),
+        dv01_per_eur_1m=(
+            dv01_per_eur_1m
+        ),
+        position_notional_eur=(
+            position_notional_eur
+        ),
+        position_dv01_eur=(
+            position_dv01_eur
+        ),
     )
 
 
@@ -420,17 +560,29 @@ def build_instrument_snapshot(
     instrument: SovereignInstrument,
     german_curve: pd.DataFrame,
     settlement_date: date,
-    position_notional_eur: float = DEFAULT_POSITION_NOTIONAL_EUR,
-    explicit_yield_input: SovereignYieldInput | None = None,
+    position_notional_eur: float = (
+        DEFAULT_POSITION_NOTIONAL_EUR
+    ),
+    explicit_yield_input: (
+        SovereignYieldInput
+        | None
+    ) = None,
 ) -> SovereignSnapshotResult:
     """
     Build one complete sovereign bond snapshot.
 
-    German instruments use their matching official benchmark yield when
-    no explicit input is supplied.
+    German instruments use an exact matching official benchmark yield
+    when one exists and no explicit input is supplied.
 
-    Non-German instruments require an explicit instrument-level yield.
-    RepoLens does not infer or manufacture an Italian bond yield.
+    Any instrument may instead use an explicit desk-input yield.
+
+    Non-German instruments always require an explicit instrument-level
+    yield.
+
+    When no exact German benchmark exists for the instrument's assigned
+    maturity sector, RepoLens still values an instrument from an
+    explicit yield but reports the German benchmark and sovereign spread
+    as unavailable rather than interpolating them.
     """
     validate_position_notional(
         position_notional_eur
@@ -445,20 +597,33 @@ def build_instrument_snapshot(
         german_curve
     )
 
-    german_benchmark = german_benchmark_for_tenor(
-        prepared_curve=prepared_curve,
-        tenor_years=instrument.benchmark_tenor_years,
+    german_benchmark = (
+        optional_german_benchmark_for_tenor(
+            prepared_curve=prepared_curve,
+            tenor_years=(
+                instrument
+                .benchmark_tenor_years
+            ),
+        )
     )
 
-    german_yield_percent = float(
-        german_benchmark[
-            "yield_percent"
-        ]
-    )
+    if german_benchmark is None:
+        german_yield_percent = float(
+            "nan"
+        )
+    else:
+        german_yield_percent = float(
+            german_benchmark[
+                "yield_percent"
+            ]
+        )
 
     if explicit_yield_input is not None:
         if (
-            explicit_yield_input.isin.strip().upper()
+            explicit_yield_input
+            .isin
+            .strip()
+            .upper()
             != instrument.isin
         ):
             raise SovereignSnapshotValidationError(
@@ -466,23 +631,33 @@ def build_instrument_snapshot(
             )
 
         yield_percent = (
-            explicit_yield_input.yield_percent
+            explicit_yield_input
+            .yield_percent
         )
 
         observation_date = (
-            explicit_yield_input.observation_date
+            explicit_yield_input
+            .observation_date
         )
 
         source_name = (
-            explicit_yield_input.source_name
+            explicit_yield_input
+            .source_name
         )
 
         data_status = (
-            explicit_yield_input.data_status
+            explicit_yield_input
+            .data_status
         )
 
-    elif instrument.country == SovereignCountry.GERMANY:
-        yield_percent = german_yield_percent
+    elif (
+        instrument.country
+        == SovereignCountry.GERMANY
+        and german_benchmark is not None
+    ):
+        yield_percent = (
+            german_yield_percent
+        )
 
         observation_date = pd.Timestamp(
             german_benchmark[
@@ -497,7 +672,20 @@ def build_instrument_snapshot(
         )
 
         data_status = (
-            SnapshotDataStatus.OFFICIAL_DAILY
+            SnapshotDataStatus
+            .OFFICIAL_DAILY
+        )
+
+    elif (
+        instrument.country
+        == SovereignCountry.GERMANY
+    ):
+        raise SovereignSnapshotValidationError(
+            "An explicit instrument-level yield is required for "
+            f"{instrument.display_name} because no exact permitted "
+            f"German {instrument.benchmark_tenor_years}Y benchmark "
+            "observation is available. RepoLens will not interpolate "
+            "or manufacture one."
         )
 
     else:
@@ -513,8 +701,13 @@ def build_instrument_snapshot(
         )
 
     metrics = calculate_bond_risk_metrics(
-        bond=instrument.to_fixed_rate_bond(),
-        settlement_date=settlement_date,
+        bond=(
+            instrument
+            .to_fixed_rate_bond()
+        ),
+        settlement_date=(
+            settlement_date
+        ),
         yield_to_maturity=(
             yield_percent
             / 100.0
@@ -524,11 +717,17 @@ def build_instrument_snapshot(
     return metrics_to_snapshot(
         instrument=instrument,
         metrics=metrics,
-        observation_date=observation_date,
+        observation_date=(
+            observation_date
+        ),
         source_name=source_name,
         data_status=data_status,
-        german_benchmark_yield_percent=german_yield_percent,
-        position_notional_eur=position_notional_eur,
+        german_benchmark_yield_percent=(
+            german_yield_percent
+        ),
+        position_notional_eur=(
+            position_notional_eur
+        ),
     )
 
 
@@ -541,20 +740,32 @@ def unavailable_snapshot(
     """
     Create a transparent unavailable row without invented analytics.
     """
-    missing = float("nan")
+    missing = float(
+        "nan"
+    )
 
     return SovereignSnapshotResult(
         isin=instrument.isin,
-        display_name=instrument.display_name,
-        country=instrument.country.value,
-        security_type=instrument.security_type.value,
+        display_name=(
+            instrument.display_name
+        ),
+        country=(
+            instrument.country.value
+        ),
+        security_type=(
+            instrument.security_type.value
+        ),
         benchmark_tenor_years=(
             instrument.benchmark_tenor_years
         ),
         observation_date=None,
         settlement_date=settlement_date,
-        source_name="No permitted instrument-level observation",
-        data_status=SnapshotDataStatus.UNAVAILABLE,
+        source_name=(
+            "No permitted instrument-level observation"
+        ),
+        data_status=(
+            SnapshotDataStatus.UNAVAILABLE
+        ),
         market_data_available=False,
         yield_percent=missing,
         german_benchmark_yield_percent=(
@@ -569,15 +780,83 @@ def unavailable_snapshot(
         convexity=missing,
         dv01_per_100=missing,
         dv01_per_eur_1m=missing,
-        position_notional_eur=position_notional_eur,
+        position_notional_eur=(
+            position_notional_eur
+        ),
         position_dv01_eur=missing,
     )
+
+
+def validate_explicit_yield_inputs(
+    explicit_yield_inputs: tuple[
+        SovereignYieldInput,
+        ...,
+    ],
+    instruments: tuple[
+        SovereignInstrument,
+        ...,
+    ],
+) -> dict[
+    str,
+    SovereignYieldInput,
+]:
+    """
+    Validate explicit yields against the actual instrument collection.
+
+    This deliberately avoids looking instruments up in the legacy
+    eight-bond registry so expanded catalogue instruments can be used
+    safely.
+    """
+    instrument_isins = {
+        instrument.isin
+        for instrument in instruments
+    }
+
+    input_by_isin: dict[
+        str,
+        SovereignYieldInput,
+    ] = {}
+
+    for yield_input in explicit_yield_inputs:
+        normalised_isin = (
+            yield_input
+            .isin
+            .strip()
+            .upper()
+        )
+
+        if (
+            normalised_isin
+            in input_by_isin
+        ):
+            raise SovereignSnapshotValidationError(
+                "Duplicate explicit yield input for "
+                f"{normalised_isin}."
+            )
+
+        if (
+            normalised_isin
+            not in instrument_isins
+        ):
+            raise SovereignSnapshotValidationError(
+                "Explicit yield input references an instrument "
+                "that is not present in the supplied sovereign "
+                f"instrument collection: {normalised_isin}."
+            )
+
+        input_by_isin[
+            normalised_isin
+        ] = yield_input
+
+    return input_by_isin
 
 
 def build_registry_snapshot(
     german_curve: pd.DataFrame,
     settlement_date: date,
-    position_notional_eur: float = DEFAULT_POSITION_NOTIONAL_EUR,
+    position_notional_eur: float = (
+        DEFAULT_POSITION_NOTIONAL_EUR
+    ),
     explicit_yield_inputs: tuple[
         SovereignYieldInput,
         ...,
@@ -588,10 +867,13 @@ def build_registry_snapshot(
     ] = SOVEREIGN_INSTRUMENTS,
 ) -> pd.DataFrame:
     """
-    Build a snapshot for the full approved sovereign registry.
+    Build a snapshot for a sovereign instrument collection.
 
-    Missing non-German market data is shown as UNAVAILABLE rather than
-    replaced with a proxy yield.
+    Missing instrument-level market data is represented as UNAVAILABLE.
+
+    Missing German maturity-sector observations are also represented
+    transparently. RepoLens does not use an interpolated or synthetic
+    German yield as a substitute for an unavailable official tenor.
     """
     validate_position_notional(
         position_notional_eur
@@ -602,31 +884,14 @@ def build_registry_snapshot(
             "instruments must not be empty."
         )
 
-    input_by_isin: dict[
-        str,
-        SovereignYieldInput,
-    ] = {}
-
-    for yield_input in explicit_yield_inputs:
-        normalised_isin = (
-            yield_input.isin
-            .strip()
-            .upper()
+    input_by_isin = (
+        validate_explicit_yield_inputs(
+            explicit_yield_inputs=(
+                explicit_yield_inputs
+            ),
+            instruments=instruments,
         )
-
-        if normalised_isin in input_by_isin:
-            raise SovereignSnapshotValidationError(
-                "Duplicate explicit yield input for "
-                f"{normalised_isin}."
-            )
-
-        get_instrument(
-            normalised_isin
-        )
-
-        input_by_isin[
-            normalised_isin
-        ] = yield_input
+    )
 
     prepared_curve = prepare_german_benchmark_curve(
         german_curve
@@ -637,30 +902,55 @@ def build_registry_snapshot(
     ] = []
 
     for instrument in instruments:
-        benchmark = german_benchmark_for_tenor(
-            prepared_curve=prepared_curve,
-            tenor_years=instrument.benchmark_tenor_years,
+        benchmark = (
+            optional_german_benchmark_for_tenor(
+                prepared_curve=prepared_curve,
+                tenor_years=(
+                    instrument
+                    .benchmark_tenor_years
+                ),
+            )
         )
 
-        explicit_input = input_by_isin.get(
-            instrument.isin
+        if benchmark is None:
+            german_yield_percent = float(
+                "nan"
+            )
+        else:
+            german_yield_percent = float(
+                benchmark[
+                    "yield_percent"
+                ]
+            )
+
+        explicit_input = (
+            input_by_isin.get(
+                instrument.isin
+            )
         )
 
-        if (
-            instrument.country
-            != SovereignCountry.GERMANY
-            and explicit_input is None
-        ):
+        has_usable_market_input = (
+            explicit_input is not None
+            or (
+                instrument.country
+                == SovereignCountry.GERMANY
+                and benchmark is not None
+            )
+        )
+
+        if not has_usable_market_input:
             snapshots.append(
                 unavailable_snapshot(
                     instrument=instrument,
-                    settlement_date=settlement_date,
-                    german_benchmark_yield_percent=float(
-                        benchmark[
-                            "yield_percent"
-                        ]
+                    settlement_date=(
+                        settlement_date
                     ),
-                    position_notional_eur=position_notional_eur,
+                    german_benchmark_yield_percent=(
+                        german_yield_percent
+                    ),
+                    position_notional_eur=(
+                        position_notional_eur
+                    ),
                 )
             )
 
@@ -670,9 +960,15 @@ def build_registry_snapshot(
             build_instrument_snapshot(
                 instrument=instrument,
                 german_curve=prepared_curve,
-                settlement_date=settlement_date,
-                position_notional_eur=position_notional_eur,
-                explicit_yield_input=explicit_input,
+                settlement_date=(
+                    settlement_date
+                ),
+                position_notional_eur=(
+                    position_notional_eur
+                ),
+                explicit_yield_input=(
+                    explicit_input
+                ),
             )
         )
 
@@ -705,35 +1001,55 @@ def snapshot_scenarios(
         settlement_date=settlement_date,
     )
 
-    scenario_results = run_parallel_yield_scenarios(
-        bond=instrument.to_fixed_rate_bond(),
-        settlement_date=settlement_date,
-        yield_to_maturity=(
-            yield_percent
-            / 100.0
-        ),
-        position_notional=position_notional_eur,
-        yield_shocks_bp=yield_shocks_bp,
+    scenario_results = (
+        run_parallel_yield_scenarios(
+            bond=(
+                instrument
+                .to_fixed_rate_bond()
+            ),
+            settlement_date=(
+                settlement_date
+            ),
+            yield_to_maturity=(
+                yield_percent
+                / 100.0
+            ),
+            position_notional=(
+                position_notional_eur
+            ),
+            yield_shocks_bp=(
+                yield_shocks_bp
+            ),
+        )
     )
 
     return pd.DataFrame(
         [
             {
-                "isin": instrument.isin,
-                "yield_shock_bp": result.yield_shock_bp,
+                "isin": (
+                    instrument.isin
+                ),
+                "yield_shock_bp": (
+                    result.yield_shock_bp
+                ),
                 "shocked_yield_percent": (
                     result.shocked_yield
                     * 100.0
                 ),
                 "shocked_clean_price": (
-                    result.shocked_clean_price
+                    result
+                    .shocked_clean_price
                 ),
                 "clean_price_change": (
-                    result.clean_price_change
+                    result
+                    .clean_price_change
                 ),
-                "position_pnl_eur": result.position_pnl,
+                "position_pnl_eur": (
+                    result.position_pnl
+                ),
             }
-            for result in scenario_results
+            for result
+            in scenario_results
         ]
     )
 
@@ -755,51 +1071,96 @@ def snapshots_to_frame(
     rows = [
         {
             "isin": snapshot.isin,
-            "display_name": snapshot.display_name,
-            "country": snapshot.country,
-            "security_type": snapshot.security_type,
+            "display_name": (
+                snapshot.display_name
+            ),
+            "country": (
+                snapshot.country
+            ),
+            "security_type": (
+                snapshot.security_type
+            ),
             "benchmark_tenor_years": (
-                snapshot.benchmark_tenor_years
+                snapshot
+                .benchmark_tenor_years
             ),
-            "observation_date": snapshot.observation_date,
-            "settlement_date": snapshot.settlement_date,
-            "source_name": snapshot.source_name,
-            "data_status": snapshot.data_status.value,
+            "observation_date": (
+                snapshot.observation_date
+            ),
+            "settlement_date": (
+                snapshot.settlement_date
+            ),
+            "source_name": (
+                snapshot.source_name
+            ),
+            "data_status": (
+                snapshot
+                .data_status
+                .value
+            ),
             "market_data_available": (
-                snapshot.market_data_available
+                snapshot
+                .market_data_available
             ),
-            "yield_percent": snapshot.yield_percent,
+            "yield_percent": (
+                snapshot.yield_percent
+            ),
             "german_benchmark_yield_percent": (
-                snapshot.german_benchmark_yield_percent
+                snapshot
+                .german_benchmark_yield_percent
             ),
             "spread_to_germany_bp": (
-                snapshot.spread_to_germany_bp
+                snapshot
+                .spread_to_germany_bp
             ),
-            "clean_price": snapshot.clean_price,
-            "dirty_price": snapshot.dirty_price,
-            "accrued_interest": snapshot.accrued_interest,
-            "modified_duration": snapshot.modified_duration,
-            "macaulay_duration": snapshot.macaulay_duration,
-            "convexity": snapshot.convexity,
-            "dv01_per_100": snapshot.dv01_per_100,
-            "dv01_per_eur_1m": snapshot.dv01_per_eur_1m,
+            "clean_price": (
+                snapshot.clean_price
+            ),
+            "dirty_price": (
+                snapshot.dirty_price
+            ),
+            "accrued_interest": (
+                snapshot.accrued_interest
+            ),
+            "modified_duration": (
+                snapshot.modified_duration
+            ),
+            "macaulay_duration": (
+                snapshot.macaulay_duration
+            ),
+            "convexity": (
+                snapshot.convexity
+            ),
+            "dv01_per_100": (
+                snapshot.dv01_per_100
+            ),
+            "dv01_per_eur_1m": (
+                snapshot.dv01_per_eur_1m
+            ),
             "position_notional_eur": (
-                snapshot.position_notional_eur
+                snapshot
+                .position_notional_eur
             ),
             "position_dv01_eur": (
                 snapshot.position_dv01_eur
             ),
         }
-        for snapshot in snapshots
+        for snapshot
+        in snapshots
     ]
 
-    return pd.DataFrame(
-        rows
-    ).sort_values(
-        [
-            "country",
-            "benchmark_tenor_years",
-        ]
-    ).reset_index(
-        drop=True
+    return (
+        pd.DataFrame(
+            rows
+        )
+        .sort_values(
+            [
+                "country",
+                "benchmark_tenor_years",
+                "isin",
+            ]
+        )
+        .reset_index(
+            drop=True
+        )
     )
