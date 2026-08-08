@@ -7,8 +7,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from app_components.sovereign_instrument_picker import (
+    sovereign_instrument_picker,
+)
 from src.sovereign_instrument_catalog import (
-    all_instruments,
     master_record_by_isin,
 )
 from src.sovereign_instrument_master import (
@@ -17,7 +19,6 @@ from src.sovereign_instrument_master import (
 from src.sovereign_instruments import (
     SovereignCountry,
     SovereignInstrument,
-    SovereignSecurityType,
 )
 from src.sovereign_snapshot import (
     DEFAULT_SCENARIO_SHOCKS_BP,
@@ -157,19 +158,6 @@ def format_euro(
         prefix="€",
     )
 
-
-def instrument_label(
-    instrument: SovereignInstrument,
-) -> str:
-    """
-    Create the bond selector label.
-    """
-    return (
-        f"{instrument.country.value} | "
-        f"{instrument.benchmark_tenor_years}Y | "
-        f"{instrument.display_name} | "
-        f"{instrument.isin}"
-    )
 
 
 def latest_benchmark_date(
@@ -801,37 +789,6 @@ def render_instrument_reference(
     )
 
 
-def filtered_instrument_universe(
-    country_filter: str,
-    security_filter: str,
-) -> tuple[
-    SovereignInstrument,
-    ...,
-]:
-    """
-    Filter the complete sovereign catalogue.
-    """
-    instruments = all_instruments()
-
-    selected = tuple(
-        instrument
-        for instrument in instruments
-        if (
-            (
-                country_filter == "All"
-                or instrument.country.value
-                == country_filter
-            )
-            and (
-                security_filter == "All"
-                or instrument.security_type.value
-                == security_filter
-            )
-        )
-    )
-
-    return selected
-
 
 def main() -> None:
     """
@@ -850,10 +807,6 @@ def main() -> None:
             latest_benchmark_date(
                 benchmark_data
             )
-        )
-
-        complete_catalogue = (
-            all_instruments()
         )
 
     except (
@@ -875,108 +828,11 @@ def main() -> None:
 
         st.stop()
 
-    country_options = [
-        "All",
-        *[
-            country.value
-            for country
-            in SovereignCountry
-        ],
-    ]
-
-    security_options = [
-        "All",
-        *sorted(
-            {
-                instrument
-                .security_type
-                .value
-                for instrument
-                in complete_catalogue
-            }
-        ),
-    ]
-
     with st.sidebar.expander(
         "Bond Terminal controls",
         expanded=True,
     ):
-        country_filter = st.selectbox(
-            "Country",
-            options=country_options,
-            index=0,
-            key="sovereign_terminal_country_filter",
-        )
-
-        security_filter = st.selectbox(
-            "Security type",
-            options=security_options,
-            index=0,
-            key="sovereign_terminal_security_filter",
-        )
-
-        filtered_instruments = (
-            filtered_instrument_universe(
-                country_filter=country_filter,
-                security_filter=security_filter,
-            )
-        )
-
-        if not filtered_instruments:
-            st.warning(
-                "No bonds match the selected filters."
-            )
-
-            st.stop()
-
-        instruments_by_label = {
-            instrument_label(
-                instrument
-            ): instrument
-            for instrument
-            in filtered_instruments
-        }
-
-        labels = list(
-            instruments_by_label
-        )
-
-        default_index = 0
-
-        for (
-            index,
-            label,
-        ) in enumerate(
-            labels
-        ):
-            candidate = (
-                instruments_by_label[
-                    label
-                ]
-            )
-
-            if (
-                candidate.country
-                == SovereignCountry.GERMANY
-                and candidate
-                .benchmark_tenor_years
-                == 10
-            ):
-                default_index = index
-                break
-
-        selected_label = st.selectbox(
-            "Instrument",
-            options=labels,
-            index=default_index,
-            key="sovereign_terminal_instrument",
-        )
-
-        instrument = (
-            instruments_by_label[
-                selected_label
-            ]
-        )
+        instrument = sovereign_instrument_picker()
 
         record = master_record_by_isin(
             instrument.isin
