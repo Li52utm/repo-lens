@@ -8,9 +8,7 @@ from src.sovereign_instrument_catalog import (
     all_instruments,
     master_record_by_isin,
 )
-from src.sovereign_instrument_master import (
-    BenchmarkStatus,
-)
+from src.sovereign_instrument_master import BenchmarkStatus
 from src.sovereign_instruments import (
     SovereignCountry,
     SovereignInstrument,
@@ -33,9 +31,6 @@ PICKER_SECURITY_TYPE_SESSION_KEY = (
 def benchmark_status_label(
     status: BenchmarkStatus,
 ) -> str:
-    """
-    Convert catalogue benchmark status into readable desk terminology.
-    """
     labels = {
         BenchmarkStatus.PRIMARY_BENCHMARK: "Primary benchmark",
         BenchmarkStatus.REFERENCE_BOND: "Reference bond",
@@ -48,9 +43,6 @@ def benchmark_status_label(
 def coupon_frequency_label(
     frequency: int,
 ) -> str:
-    """
-    Convert coupon frequency into readable text.
-    """
     labels = {
         1: "Annual",
         2: "Semi-annual",
@@ -66,16 +58,10 @@ def coupon_frequency_label(
 def compact_date(
     value: date,
 ) -> str:
-    """
-    Format a date for compact instrument metadata.
-    """
     return value.strftime("%d %b %Y")
 
 
 def default_instrument() -> SovereignInstrument:
-    """
-    Return Germany 10Y as the default terminal instrument when available.
-    """
     instruments = all_instruments()
 
     if not instruments:
@@ -96,9 +82,6 @@ def default_instrument() -> SovereignInstrument:
 
 
 def resolve_selected_instrument() -> SovereignInstrument:
-    """
-    Resolve the currently selected catalogue instrument.
-    """
     instruments = all_instruments()
 
     if not instruments:
@@ -115,7 +98,10 @@ def resolve_selected_instrument() -> SovereignInstrument:
         SELECTED_INSTRUMENT_SESSION_KEY
     )
 
-    if selected_isin in instruments_by_isin:
+    if (
+        selected_isin is not None
+        and selected_isin in instruments_by_isin
+    ):
         return instruments_by_isin[selected_isin]
 
     instrument = default_instrument()
@@ -130,9 +116,6 @@ def resolve_selected_instrument() -> SovereignInstrument:
 def instrument_search_text(
     instrument: SovereignInstrument,
 ) -> str:
-    """
-    Return searchable catalogue text for one instrument.
-    """
     record = master_record_by_isin(
         instrument.isin
     )
@@ -158,9 +141,6 @@ def filtered_instruments(
     security_type_filter: str,
     search_text: str,
 ) -> tuple[SovereignInstrument, ...]:
-    """
-    Filter the full sovereign catalogue.
-    """
     normalised_search = (
         search_text
         .strip()
@@ -203,19 +183,11 @@ def filtered_instruments(
     )
 
 
-def render_selected_instrument_card(
+def render_selected_instrument(
     instrument: SovereignInstrument,
 ) -> None:
-    """
-    Render the active instrument without Markdown interpreting HTML
-    indentation as a code block.
-    """
     record = master_record_by_isin(
         instrument.isin
-    )
-
-    status = benchmark_status_label(
-        record.benchmark_status
     )
 
     coupon_percent = (
@@ -223,45 +195,39 @@ def render_selected_instrument_card(
         * 100.0
     )
 
-    html = (
-        '<div class="instrument-selection-card">'
-        '<div class="instrument-selection-kicker">'
-        'Selected instrument'
-        '</div>'
-        '<div class="instrument-selection-name">'
-        f'{instrument.display_name}'
-        '</div>'
-        '<div class="instrument-selection-meta">'
-        f'{instrument.isin} · '
-        f'{instrument.benchmark_tenor_years}Y sector · '
-        f'{status}'
-        '</div>'
-        '<div class="instrument-selection-detail">'
-        f'Coupon {coupon_percent:.3f}% · '
-        f'Maturity {compact_date(instrument.maturity_date)} · '
-        f'{coupon_frequency_label(instrument.coupon_frequency)}'
-        '</div>'
-        '</div>'
-    )
-
-    st.markdown(
-        html,
-        unsafe_allow_html=True,
-    )
-
-
-def render_instrument_option(
-    instrument: SovereignInstrument,
-) -> None:
-    """
-    Render one bond inside the expanded browser.
-    """
-    record = master_record_by_isin(
-        instrument.isin
-    )
-
     status = benchmark_status_label(
         record.benchmark_status
+    )
+
+    with st.container(
+        border=True
+    ):
+        st.caption(
+            "SELECTED INSTRUMENT"
+        )
+
+        st.markdown(
+            f"**{instrument.display_name}**"
+        )
+
+        st.caption(
+            f"{instrument.isin} · "
+            f"{instrument.benchmark_tenor_years}Y sector · "
+            f"{status}"
+        )
+
+        st.caption(
+            f"Coupon {coupon_percent:.3f}% · "
+            f"Maturity {compact_date(instrument.maturity_date)} · "
+            f"{coupon_frequency_label(instrument.coupon_frequency)}"
+        )
+
+
+def render_browser_instrument(
+    instrument: SovereignInstrument,
+) -> None:
+    record = master_record_by_isin(
+        instrument.isin
     )
 
     coupon_percent = (
@@ -269,28 +235,25 @@ def render_instrument_option(
         * 100.0
     )
 
-    html = (
-        '<div class="instrument-browser-row">'
-        '<div class="instrument-browser-country">'
-        f'{instrument.country_code} · '
-        f'{instrument.benchmark_tenor_years}Y · '
-        f'{instrument.security_type.value}'
-        '</div>'
-        '<div class="instrument-browser-name">'
-        f'{instrument.display_name}'
-        '</div>'
-        '<div class="instrument-browser-meta">'
-        f'{instrument.isin} · '
-        f'Coupon {coupon_percent:.3f}% · '
-        f'Maturity {compact_date(instrument.maturity_date)} · '
-        f'{status}'
-        '</div>'
-        '</div>'
+    status = benchmark_status_label(
+        record.benchmark_status
     )
 
     st.markdown(
-        html,
-        unsafe_allow_html=True,
+        f"**{instrument.country_code} · "
+        f"{instrument.benchmark_tenor_years}Y · "
+        f"{instrument.security_type.value}**"
+    )
+
+    st.markdown(
+        instrument.display_name
+    )
+
+    st.caption(
+        f"{instrument.isin} · "
+        f"Coupon {coupon_percent:.3f}% · "
+        f"Maturity {compact_date(instrument.maturity_date)} · "
+        f"{status}"
     )
 
 
@@ -299,9 +262,6 @@ def render_instrument_option(
     width="large",
 )
 def show_instrument_browser() -> None:
-    """
-    Render the expanded searchable instrument universe.
-    """
     instruments = all_instruments()
 
     if not instruments:
@@ -311,8 +271,8 @@ def show_instrument_browser() -> None:
         return
 
     st.caption(
-        "Browse the RepoLens sovereign universe and select "
-        "the instrument to load into the Bond Terminal."
+        "Browse the RepoLens sovereign universe and load "
+        "an instrument into the Bond Terminal."
     )
 
     country_options = [
@@ -335,7 +295,9 @@ def show_instrument_browser() -> None:
         ),
     ]
 
-    country_column, security_column = st.columns(2)
+    country_column, security_column = st.columns(
+        2
+    )
 
     with country_column:
         country_filter = st.selectbox(
@@ -352,9 +314,9 @@ def show_instrument_browser() -> None:
         )
 
     search_text = st.text_input(
-        "Search instrument",
+        "Search",
         placeholder=(
-            "Search name, ISIN, tenor, country or security type"
+            "Search ISIN, issuer, bond name, tenor..."
         ),
         key="repolens_instrument_picker_search",
     )
@@ -367,12 +329,12 @@ def show_instrument_browser() -> None:
 
     st.caption(
         f"{len(matches)} "
-        f"{'instrument' if len(matches) == 1 else 'instruments'}"
+        f"{'instrument' if len(matches) == 1 else 'instruments'} shown"
     )
 
     if not matches:
         st.info(
-            "No instruments match the current filters."
+            "No instruments match the selected filters."
         )
         return
 
@@ -381,62 +343,59 @@ def show_instrument_browser() -> None:
     )
 
     for instrument in matches:
-        information_column, action_column = st.columns(
-            [5, 1],
-            vertical_alignment="center",
-        )
-
-        with information_column:
-            render_instrument_option(
-                instrument
+        with st.container(
+            border=True
+        ):
+            information_column, action_column = (
+                st.columns(
+                    [5, 1],
+                    vertical_alignment="center",
+                )
             )
 
-        with action_column:
-            is_selected = (
-                instrument.isin
-                == selected_isin
-            )
-
-            if is_selected:
-                st.button(
-                    "Selected",
-                    key=(
-                        "repolens_selected_"
-                        f"{instrument.isin}"
-                    ),
-                    disabled=True,
-                    width="stretch",
+            with information_column:
+                render_browser_instrument(
+                    instrument
                 )
 
-            else:
-                if st.button(
-                    "Select",
-                    key=(
-                        "repolens_select_"
-                        f"{instrument.isin}"
-                    ),
-                    type="primary",
-                    width="stretch",
-                ):
-                    st.session_state[
-                        SELECTED_INSTRUMENT_SESSION_KEY
-                    ] = instrument.isin
+            with action_column:
+                is_selected = (
+                    instrument.isin
+                    == selected_isin
+                )
 
-                    st.rerun()
+                if is_selected:
+                    st.button(
+                        "Selected",
+                        key=(
+                            "repolens_selected_"
+                            f"{instrument.isin}"
+                        ),
+                        disabled=True,
+                        width="stretch",
+                    )
 
-        st.divider()
+                else:
+                    if st.button(
+                        "Select",
+                        key=(
+                            "repolens_select_"
+                            f"{instrument.isin}"
+                        ),
+                        type="primary",
+                        width="stretch",
+                    ):
+                        st.session_state[
+                            SELECTED_INSTRUMENT_SESSION_KEY
+                        ] = instrument.isin
+
+                        st.rerun()
 
 
 def sovereign_instrument_picker() -> SovereignInstrument:
-    """
-    Render the compact Bond Terminal instrument selector.
-
-    The complete catalogue opens in a large dialog rather than being
-    forced into a narrow sidebar selectbox.
-    """
     instrument = resolve_selected_instrument()
 
-    render_selected_instrument_card(
+    render_selected_instrument(
         instrument
     )
 
