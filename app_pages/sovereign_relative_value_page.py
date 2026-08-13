@@ -160,13 +160,19 @@ def instrument_label(
     instrument: SovereignInstrument,
 ) -> str:
     """
-    Create a compact instrument selector label.
+    Create a compact desk-style selector label.
     """
+    coupon_percent = (
+        instrument.annual_coupon_rate
+        * 100.0
+    )
+
     return (
-        f"{instrument.country.value} "
-        f"{instrument.benchmark_tenor_years}Y | "
-        f"{instrument.display_name} | "
-        f"{instrument.isin}"
+        f"{instrument.country_code} · "
+        f"{instrument.benchmark_tenor_years}Y · "
+        f"{coupon_percent:.2f}% "
+        f"{instrument.security_type.value} · "
+        f"{instrument.maturity_date.strftime('%b-%Y')}"
     )
 
 
@@ -540,6 +546,22 @@ def main() -> None:
 
         st.stop()
 
+    st.markdown(
+        """
+        <div class="repolens-kicker">
+            European sovereign relative value
+        </div>
+        <div class="repolens-title">
+            Relative Value Monitor
+        </div>
+        <div class="repolens-subtitle">
+            Construct DV01-neutral sovereign trades and analyse
+            spread risk separately from parallel interest-rate risk.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     instruments_by_label = {
         instrument_label(
             instrument
@@ -569,27 +591,37 @@ def main() -> None:
         )
     )
 
-    with st.sidebar.expander(
-        "Relative Value controls",
-        expanded=True,
+    with st.container(
+        border=True
     ):
-        anchor_label = st.selectbox(
-            "Anchor instrument",
-            options=labels,
-            index=labels.index(
-                default_anchor_label
-            ),
-            key="rv_anchor_instrument",
+        st.markdown(
+            '<div class="section-label">Trade builder</div>',
+            unsafe_allow_html=True,
         )
 
-        hedge_label = st.selectbox(
-            "Hedge instrument",
-            options=labels,
-            index=labels.index(
-                default_hedge_label
-            ),
-            key="rv_hedge_instrument",
+        selector_left, selector_right = st.columns(
+            2
         )
+
+        with selector_left:
+            anchor_label = st.selectbox(
+                "Anchor instrument",
+                options=labels,
+                index=labels.index(
+                    default_anchor_label
+                ),
+                key="rv_anchor_instrument",
+            )
+
+        with selector_right:
+            hedge_label = st.selectbox(
+                "Hedge instrument",
+                options=labels,
+                index=labels.index(
+                    default_hedge_label
+                ),
+                key="rv_hedge_instrument",
+            )
 
         anchor_instrument = instruments_by_label[
             anchor_label
@@ -599,15 +631,27 @@ def main() -> None:
             hedge_label
         ]
 
-        anchor_direction_text = st.radio(
-            "Anchor direction",
-            options=[
-                "Long",
-                "Short",
-            ],
-            horizontal=True,
-            key="rv_anchor_direction",
+        st.caption(
+            f"Anchor: {anchor_instrument.display_name} · "
+            f"{anchor_instrument.isin}    |    "
+            f"Hedge: {hedge_instrument.display_name} · "
+            f"{hedge_instrument.isin}"
         )
+
+        setup_one, setup_two, setup_three = st.columns(
+            3
+        )
+
+        with setup_one:
+            anchor_direction_text = st.radio(
+                "Anchor direction",
+                options=[
+                    "Long",
+                    "Short",
+                ],
+                horizontal=True,
+                key="rv_anchor_direction",
+            )
 
         if anchor_direction_text == "Long":
             anchor_direction = PositionDirection.LONG
@@ -616,18 +660,15 @@ def main() -> None:
             anchor_direction = PositionDirection.SHORT
             hedge_direction = PositionDirection.LONG
 
-        st.caption(
-            f"Hedge direction: {hedge_direction.value}"
-        )
-
-        anchor_notional_eur = st.number_input(
-            "Anchor face value (€)",
-            min_value=1_000_000.0,
-            value=10_000_000.0,
-            step=1_000_000.0,
-            format="%.0f",
-            key="rv_anchor_notional",
-        )
+        with setup_two:
+            anchor_notional_eur = st.number_input(
+                "Anchor face value (€)",
+                min_value=1_000_000.0,
+                value=10_000_000.0,
+                step=1_000_000.0,
+                format="%.0f",
+                key="rv_anchor_notional",
+            )
 
         earliest_settlement = max(
             anchor_instrument.issue_date,
@@ -651,16 +692,18 @@ def main() -> None:
             latest_settlement,
         )
 
-        settlement_date = st.date_input(
-            "Settlement date",
-            value=default_settlement,
-            min_value=earliest_settlement,
-            max_value=latest_settlement,
-            key="rv_settlement_date",
-        )
+        with setup_three:
+            settlement_date = st.date_input(
+                "Settlement date",
+                value=default_settlement,
+                min_value=earliest_settlement,
+                max_value=latest_settlement,
+                key="rv_settlement_date",
+            )
 
-        st.markdown(
-            "**Market yields**"
+        st.caption(
+            f"Hedge direction is automatically {hedge_direction.value} "
+            "to create the opposite leg."
         )
 
         anchor_german_yield = latest_german_yield(
@@ -673,75 +716,97 @@ def main() -> None:
             tenor_years=hedge_instrument.benchmark_tenor_years,
         )
 
-        if anchor_instrument.country == SovereignCountry.ITALY:
-            anchor_yield_percent = st.number_input(
-                "Anchor yield (%)",
-                min_value=-10.0,
-                max_value=25.0,
-                value=float(
-                    anchor_german_yield
-                    + 1.00
-                ),
-                step=0.01,
-                format="%.3f",
-                key=(
-                    "rv_anchor_yield_"
-                    f"{anchor_instrument.isin}"
-                ),
+        yield_left, yield_right = st.columns(
+            2
+        )
+
+        with yield_left:
+            st.markdown(
+                "**Anchor market input**"
             )
 
-            anchor_source_name = st.text_input(
-                "Anchor yield source",
-                value="Desk input",
-                key=(
-                    "rv_anchor_source_"
-                    f"{anchor_instrument.isin}"
-                ),
-            )
-        else:
-            anchor_yield_percent = anchor_german_yield
-            anchor_source_name = "Deutsche Bundesbank"
+            if anchor_instrument.country == SovereignCountry.ITALY:
+                anchor_yield_percent = st.number_input(
+                    "Anchor yield (%)",
+                    min_value=-10.0,
+                    max_value=25.0,
+                    value=float(
+                        anchor_german_yield
+                        + 1.00
+                    ),
+                    step=0.01,
+                    format="%.3f",
+                    key=(
+                        "rv_anchor_yield_"
+                        f"{anchor_instrument.isin}"
+                    ),
+                )
 
-            st.caption(
-                "Anchor yield: "
-                f"{anchor_yield_percent:.3f}% "
-                "official German daily benchmark"
+                anchor_source_name = st.text_input(
+                    "Anchor yield source",
+                    value="Desk input",
+                    key=(
+                        "rv_anchor_source_"
+                        f"{anchor_instrument.isin}"
+                    ),
+                )
+            else:
+                anchor_yield_percent = anchor_german_yield
+                anchor_source_name = "Deutsche Bundesbank"
+
+                st.metric(
+                    "Official anchor yield",
+                    f"{anchor_yield_percent:.3f}%",
+                    border=True,
+                )
+
+                st.caption(
+                    "Official German daily benchmark reference data."
+                )
+
+        with yield_right:
+            st.markdown(
+                "**Hedge market input**"
             )
 
-        if hedge_instrument.country == SovereignCountry.ITALY:
-            hedge_yield_percent = st.number_input(
-                "Hedge yield (%)",
-                min_value=-10.0,
-                max_value=25.0,
-                value=float(
-                    hedge_german_yield
-                    + 1.00
-                ),
-                step=0.01,
-                format="%.3f",
-                key=(
-                    "rv_hedge_yield_"
-                    f"{hedge_instrument.isin}"
-                ),
-            )
+            if hedge_instrument.country == SovereignCountry.ITALY:
+                hedge_yield_percent = st.number_input(
+                    "Hedge yield (%)",
+                    min_value=-10.0,
+                    max_value=25.0,
+                    value=float(
+                        hedge_german_yield
+                        + 1.00
+                    ),
+                    step=0.01,
+                    format="%.3f",
+                    key=(
+                        "rv_hedge_yield_"
+                        f"{hedge_instrument.isin}"
+                    ),
+                )
 
-            hedge_source_name = st.text_input(
-                "Hedge yield source",
-                value="Desk input",
-                key=(
-                    "rv_hedge_source_"
-                    f"{hedge_instrument.isin}"
-                ),
-            )
-        else:
-            hedge_yield_percent = hedge_german_yield
-            hedge_source_name = "Deutsche Bundesbank"
+                hedge_source_name = st.text_input(
+                    "Hedge yield source",
+                    value="Desk input",
+                    key=(
+                        "rv_hedge_source_"
+                        f"{hedge_instrument.isin}"
+                    ),
+                )
+            else:
+                hedge_yield_percent = hedge_german_yield
+                hedge_source_name = "Deutsche Bundesbank"
 
-            st.caption(
-                "Hedge yield: "
-                f"{hedge_yield_percent:.3f}% "
-                "official German daily benchmark"
-            )
+                st.metric(
+                    "Official hedge yield",
+                    f"{hedge_yield_percent:.3f}%",
+                    border=True,
+                )
+
+                st.caption(
+                    "Official German daily benchmark reference data."
+                )
 
     if anchor_instrument.isin == hedge_instrument.isin:
         st.warning(
@@ -820,22 +885,6 @@ def main() -> None:
         )
 
         st.stop()
-
-    st.markdown(
-        """
-        <div class="repolens-kicker">
-            European sovereign relative value
-        </div>
-        <div class="repolens-title">
-            Relative Value Monitor
-        </div>
-        <div class="repolens-subtitle">
-            Construct DV01-neutral sovereign trades and analyse
-            spread risk separately from parallel interest-rate risk.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
     st.markdown(
         f"""
