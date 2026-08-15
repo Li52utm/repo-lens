@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
 import streamlit as st
@@ -18,6 +18,14 @@ from src.repo_analytics import (
     calculate_repo_trade,
     required_collateral_market_value,
     required_face_value,
+)
+from src.repo_market_state import (
+    GCReference,
+    RepoMarketStateValidationError,
+    RepoQuoteSourceType,
+    RepoSpecialnessResult,
+    SpecificRepoQuote,
+    compare_specific_to_gc,
 )
 from src.sovereign_instrument_catalog import (
     all_instruments,
@@ -181,6 +189,11 @@ def main() -> None:
 
     derived_accrued_interest: (
         float
+        | None
+    ) = None
+
+    structured_specialness: (
+        RepoSpecialnessResult
         | None
     ) = None
 
@@ -663,6 +676,20 @@ def main() -> None:
                 | None
             ) = None
 
+            specific_quote_source_name = (
+                "Interactive desk / broker input"
+            )
+            gc_quote_source_name = (
+                "Interactive desk / broker input"
+            )
+
+            specific_quote_source_type = (
+                RepoQuoteSourceType.DESK_INPUT
+            )
+            gc_quote_source_type = (
+                RepoQuoteSourceType.DESK_INPUT
+            )
+
             if compare_with_gc:
                 gc_repo_rate_percent = st.number_input(
                     "GC repo rate (%)",
@@ -672,8 +699,95 @@ def main() -> None:
                     step=0.01,
                     format="%.4f",
                     key="repo_gc_rate",
-                    help="Explicit desk / broker GC reference input.",
+                    help=(
+                        "Explicit desk / broker GC reference input. "
+                        "This is not €STR."
+                    ),
                 )
+
+                with st.expander(
+                    "GC / specific quote provenance"
+                ):
+                    provenance_left, provenance_right = (
+                        st.columns(
+                            2
+                        )
+                    )
+
+                    with provenance_left:
+                        specific_quote_source_name = (
+                            st.text_input(
+                                "Specific quote source",
+                                value=(
+                                    "Interactive desk / broker input"
+                                ),
+                                key=(
+                                    "repo_specific_quote_source"
+                                ),
+                            )
+                        )
+
+                        specific_quote_source_type = (
+                            st.selectbox(
+                                "Specific source type",
+                                options=list(
+                                    RepoQuoteSourceType
+                                ),
+                                index=0,
+                                format_func=lambda value: (
+                                    value.value
+                                    .replace(
+                                        "_",
+                                        " ",
+                                    )
+                                    .title()
+                                ),
+                                key=(
+                                    "repo_specific_source_type"
+                                ),
+                            )
+                        )
+
+                    with provenance_right:
+                        gc_quote_source_name = (
+                            st.text_input(
+                                "GC reference source",
+                                value=(
+                                    "Interactive desk / broker input"
+                                ),
+                                key=(
+                                    "repo_gc_quote_source"
+                                ),
+                            )
+                        )
+
+                        gc_quote_source_type = (
+                            st.selectbox(
+                                "GC source type",
+                                options=list(
+                                    RepoQuoteSourceType
+                                ),
+                                index=0,
+                                format_func=lambda value: (
+                                    value.value
+                                    .replace(
+                                        "_",
+                                        " ",
+                                    )
+                                    .title()
+                                ),
+                                key=(
+                                    "repo_gc_source_type"
+                                ),
+                            )
+                        )
+
+                    st.caption(
+                        "RepoLens records these as user-supplied quote "
+                        "provenance. The timestamp shown below is the "
+                        "calculator input-capture time, not an exchange "
+                        "or broker execution timestamp."
+                    )
 
     try:
         trade = RepoTradeInput(
@@ -714,7 +828,95 @@ def main() -> None:
             trade
         )
 
-    except RepoValidationError as error:
+        selected_collateral_isin: (
+            str
+            | None
+        ) = None
+
+        selected_collateral_currency: (
+            str
+            | None
+        ) = None
+
+        if selected_coupon_instrument is not None:
+            selected_collateral_isin = (
+                selected_coupon_instrument.isin
+            )
+            selected_collateral_currency = (
+                selected_coupon_instrument.currency
+            )
+
+        elif selected_money_market_instrument is not None:
+            selected_collateral_isin = (
+                selected_money_market_instrument.isin
+            )
+            selected_collateral_currency = (
+                selected_money_market_instrument.currency
+            )
+
+        if (
+            compare_with_gc
+            and gc_repo_rate_percent is not None
+            and selected_collateral_isin is not None
+            and selected_collateral_currency is not None
+        ):
+            input_capture_timestamp = (
+                datetime.now(
+                    timezone.utc
+                )
+            )
+
+            structured_specialness = (
+                compare_specific_to_gc(
+                    specific_quote=SpecificRepoQuote(
+                        isin=(
+                            selected_collateral_isin
+                        ),
+                        currency=(
+                            selected_collateral_currency
+                        ),
+                        repo_days=result.repo_days,
+                        rate_percent=float(
+                            repo_rate_percent
+                        ),
+                        quote_timestamp=(
+                            input_capture_timestamp
+                        ),
+                        source_name=(
+                            specific_quote_source_name
+                        ),
+                        source_type=(
+                            specific_quote_source_type
+                        ),
+                    ),
+                    gc_reference=GCReference(
+                        currency=(
+                            selected_collateral_currency
+                        ),
+                        repo_days=result.repo_days,
+                        rate_percent=float(
+                            gc_repo_rate_percent
+                        ),
+                        quote_timestamp=(
+                            input_capture_timestamp
+                        ),
+                        source_name=(
+                            gc_quote_source_name
+                        ),
+                        source_type=(
+                            gc_quote_source_type
+                        ),
+                        basket_name=(
+                            "User-supplied GC reference"
+                        ),
+                    ),
+                )
+            )
+
+    except (
+        RepoValidationError,
+        RepoMarketStateValidationError,
+    ) as error:
         st.error(
             "RepoLens could not calculate this repo transaction."
         )
@@ -1245,25 +1447,37 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
+        displayed_specialness_bp = (
+            structured_specialness.specialness_bp
+            if structured_specialness is not None
+            else result.specialness_bp
+        )
+
         special_columns = st.columns(
-            3
+            4
         )
 
         special_columns[0].metric(
-            "GC rate",
-            f"{gc_repo_rate_percent:.4f}%",
+            "Specific repo",
+            f"{repo_rate_percent:.4f}%",
             border=True,
         )
 
         special_columns[1].metric(
+            "GC reference",
+            f"{gc_repo_rate_percent:.4f}%",
+            border=True,
+        )
+
+        special_columns[2].metric(
             "Specialness",
-            f"{result.specialness_bp:+,.2f} bp",
+            f"{displayed_specialness_bp:+,.2f} bp",
             delta="GC minus specific repo",
             delta_color="off",
             border=True,
         )
 
-        special_columns[2].metric(
+        special_columns[3].metric(
             "Financing benefit vs GC",
             format_euro(
                 result.financing_benefit_vs_gc_eur,
@@ -1273,6 +1487,27 @@ def main() -> None:
             delta_color="off",
             border=True,
         )
+
+        if structured_specialness is not None:
+            st.caption(
+                f"Matched structured comparison · "
+                f"{structured_specialness.isin} · "
+                f"{structured_specialness.currency} · "
+                f"{structured_specialness.repo_days}-day term · "
+                f"specific source: "
+                f"{structured_specialness.specific_source_name} · "
+                f"GC source: "
+                f"{structured_specialness.gc_source_name} · "
+                f"input captured "
+                f"{structured_specialness.specific_quote_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}"
+            )
+
+        else:
+            st.caption(
+                "Manual collateral has no structured RepoLens ISIN/currency "
+                "identity, so this view uses the transaction calculator's "
+                "GC-minus-specific calculation only."
+            )
 
     st.divider()
 
@@ -1388,7 +1623,10 @@ def main() -> None:
             reference universe.
 
             Price, repo rate, GC rate, haircut and any desk override are
-            explicit **desk / broker inputs**.
+            explicit **desk / broker inputs**. For catalogue collateral,
+            RepoLens also records user-supplied GC and specific-quote
+            provenance and requires the comparison to match on currency
+            and repo term.
 
             Schedule-derived accrued interest, remaining-maturity buckets,
             cash, repo-interest, specialness, pull-to-par, financed carry,

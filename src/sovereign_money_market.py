@@ -16,6 +16,7 @@ class MoneyMarketInstrumentValidationError(MoneyMarketInstrumentError):
 
 class MoneyMarketSecurityType(StrEnum):
     BUBILL = "Bubill"
+    BTF = "BTF"
     BOT = "BOT"
 
 
@@ -214,13 +215,80 @@ GERMANY_BUBILL_MAY_2027: Final[SovereignDiscountSecurity] = SovereignDiscountSec
     data_status=MoneyMarketDataStatus.OFFICIAL_REFERENCE,
 )
 
+
+# For BTFs, issue_date records the first AFT auction date visible in the
+# official security history. BTFs can subsequently be reopened at later auctions.
+FRANCE_BTF_OCT_2026: Final[SovereignDiscountSecurity] = SovereignDiscountSecurity(
+    isin="FR0129704088",
+    display_name="France BTF October 2026",
+    country="France",
+    country_code="FR",
+    issuer="French Republic",
+    security_type=MoneyMarketSecurityType.BTF,
+    issue_date=date(2026, 7, 20),
+    maturity_date=date(2026, 10, 28),
+    currency="EUR",
+    redemption_value_per_100=100.0,
+    interest_day_count_basis=360,
+    source_name="Agence France Trésor",
+    source_locator="https://www.aft.gouv.fr/en/titre/fr0129704088",
+    source_checked_date=date(2026, 8, 15),
+    data_status=MoneyMarketDataStatus.OFFICIAL_REFERENCE,
+)
+
+FRANCE_BTF_FEB_2027: Final[SovereignDiscountSecurity] = SovereignDiscountSecurity(
+    isin="FR0129704146",
+    display_name="France BTF February 2027",
+    country="France",
+    country_code="FR",
+    issuer="French Republic",
+    security_type=MoneyMarketSecurityType.BTF,
+    issue_date=date(2026, 7, 27),
+    maturity_date=date(2027, 2, 10),
+    currency="EUR",
+    redemption_value_per_100=100.0,
+    interest_day_count_basis=360,
+    source_name="Agence France Trésor",
+    source_locator="https://www.aft.gouv.fr/en/titre/fr0129704146",
+    source_checked_date=date(2026, 8, 15),
+    data_status=MoneyMarketDataStatus.OFFICIAL_REFERENCE,
+)
+
+FRANCE_BTF_JUL_2027: Final[SovereignDiscountSecurity] = SovereignDiscountSecurity(
+    isin="FR0129704179",
+    display_name="France BTF July 2027",
+    country="France",
+    country_code="FR",
+    issuer="French Republic",
+    security_type=MoneyMarketSecurityType.BTF,
+    issue_date=date(2026, 7, 13),
+    maturity_date=date(2027, 7, 14),
+    currency="EUR",
+    redemption_value_per_100=100.0,
+    interest_day_count_basis=360,
+    source_name="Agence France Trésor",
+    source_locator="https://www.aft.gouv.fr/en/titre/fr0129704179",
+    source_checked_date=date(2026, 8, 15),
+    data_status=MoneyMarketDataStatus.OFFICIAL_REFERENCE,
+)
+
+
 GERMAN_BUBILLS: Final[tuple[SovereignDiscountSecurity, ...]] = (
     GERMANY_BUBILL_NOV_2026,
     GERMANY_BUBILL_FEB_2027,
     GERMANY_BUBILL_MAY_2027,
 )
 
-MONEY_MARKET_INSTRUMENTS: Final[tuple[SovereignDiscountSecurity, ...]] = GERMAN_BUBILLS
+FRENCH_BTFS: Final[tuple[SovereignDiscountSecurity, ...]] = (
+    FRANCE_BTF_OCT_2026,
+    FRANCE_BTF_FEB_2027,
+    FRANCE_BTF_JUL_2027,
+)
+
+MONEY_MARKET_INSTRUMENTS: Final[tuple[SovereignDiscountSecurity, ...]] = (
+    *GERMAN_BUBILLS,
+    *FRENCH_BTFS,
+)
 
 
 def get_money_market_instrument(isin: str) -> SovereignDiscountSecurity:
