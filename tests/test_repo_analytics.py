@@ -2,10 +2,14 @@ from datetime import date
 
 import pytest
 
+from src.bond_analytics import FixedRateBond
 from src.repo_analytics import (
     RepoTradeInput,
     RepoValidationError,
+    analyse_discount_security_carry_to_maturity,
+    analyse_financed_bond_carry,
     calculate_repo_trade,
+    coupon_income_between_dates,
     required_collateral_market_value,
     required_face_value,
 )
@@ -147,3 +151,198 @@ def test_invalid_dates_fail() -> None:
             purchase_date=date(2026, 8, 15),
             repurchase_date=date(2026, 8, 15),
         )
+
+
+def test_coupon_income_between_dates() -> None:
+    bond = FixedRateBond(
+        isin="TESTBOND0001",
+        issuer="Test Issuer",
+        maturity_date=date(2028, 1, 1),
+        annual_coupon_rate=0.04,
+        coupon_frequency=2,
+    )
+
+    coupon_income = coupon_income_between_dates(
+        bond=bond,
+        purchase_date=date(2026, 5, 1),
+        repurchase_date=date(2026, 8, 1),
+        position_face_value_eur=10_000_000.0,
+    )
+
+    assert coupon_income == pytest.approx(
+        200_000.0
+    )
+
+
+def test_financed_bond_carry_has_unchanged_yield_scenario() -> None:
+    bond = FixedRateBond(
+        isin="TESTBOND0001",
+        issuer="Test Issuer",
+        maturity_date=date(2030, 1, 1),
+        annual_coupon_rate=0.03,
+        coupon_frequency=2,
+    )
+
+    trade = RepoTradeInput(
+        face_value_eur=10_000_000.0,
+        clean_price_per_100=100.0,
+        accrued_interest_per_100=0.75,
+        repo_rate_percent=2.0,
+        haircut_percent=0.0,
+        purchase_date=date(2026, 4, 1),
+        repurchase_date=date(2026, 5, 1),
+    )
+
+    analysis = analyse_financed_bond_carry(
+        bond=bond,
+        trade=trade,
+        yield_shocks_bp=(
+            -10.0,
+            0.0,
+            10.0,
+        ),
+    )
+
+    unchanged = next(
+        scenario
+        for scenario in analysis.scenarios
+        if scenario.yield_shock_bp == 0.0
+    )
+
+    assert analysis.start_yield_percent == pytest.approx(
+        3.0,
+        abs=0.05,
+    )
+
+    assert unchanged.repo_interest_eur > 0.0
+    assert unchanged.financing_adjusted_pnl_per_eur_1m_face == pytest.approx(
+        unchanged.financing_adjusted_pnl_eur
+        / 10.0
+    )
+
+
+def test_financed_bond_carry_falls_when_yield_rises() -> None:
+    bond = FixedRateBond(
+        isin="TESTBOND0001",
+        issuer="Test Issuer",
+        maturity_date=date(2030, 1, 1),
+        annual_coupon_rate=0.03,
+        coupon_frequency=2,
+    )
+
+    trade = RepoTradeInput(
+        face_value_eur=10_000_000.0,
+        clean_price_per_100=100.0,
+        accrued_interest_per_100=0.75,
+        repo_rate_percent=2.0,
+        haircut_percent=0.0,
+        purchase_date=date(2026, 4, 1),
+        repurchase_date=date(2026, 5, 1),
+    )
+
+    analysis = analyse_financed_bond_carry(
+        bond=bond,
+        trade=trade,
+        yield_shocks_bp=(
+            -10.0,
+            10.0,
+        ),
+    )
+
+    yield_down = analysis.scenarios[0]
+    yield_up = analysis.scenarios[1]
+
+    assert (
+        yield_down.financing_adjusted_pnl_eur
+        > yield_up.financing_adjusted_pnl_eur
+    )
+
+
+def test_bond_carry_rejects_repo_through_maturity() -> None:
+    bond = FixedRateBond(
+        isin="TESTBOND0001",
+        issuer="Test Issuer",
+        maturity_date=date(2026, 8, 20),
+        annual_coupon_rate=0.03,
+        coupon_frequency=2,
+    )
+
+    trade = RepoTradeInput(
+        face_value_eur=10_000_000.0,
+        clean_price_per_100=100.0,
+        accrued_interest_per_100=0.0,
+        repo_rate_percent=2.0,
+        haircut_percent=0.0,
+        purchase_date=date(2026, 8, 15),
+        repurchase_date=date(2026, 8, 20),
+    )
+
+    with pytest.raises(
+        RepoValidationError,
+        match="before maturity_date",
+    ):
+        analyse_financed_bond_carry(
+            bond=bond,
+            trade=trade,
+        )
+
+
+def test_discount_security_financing_to_maturity() -> None:
+    analysis = analyse_discount_security_carry_to_maturity(
+        face_value_eur=10_000_000.0,
+        price_per_100=99.40,
+        redemption_value_per_100=100.0,
+        purchase_date=date(2026, 8, 15),
+        maturity_date=date(2026, 11, 18),
+        repo_rate_percent=1.60,
+        haircut_percent=0.50,
+        day_count_basis=360,
+        gc_repo_rate_percent=2.15,
+    )
+
+    assert analysis.days_to_maturity == 95
+    assert analysis.start_market_value_eur == pytest.approx(
+        9_940_000.0
+    )
+    assert analysis.redemption_value_eur == pytest.approx(
+        10_000_000.0
+    )
+    assert analysis.gross_pull_to_par_eur == pytest.approx(
+        60_000.0
+    )
+    assert analysis.financing_cost_to_maturity_eur > 0.0
+    assert (
+        analysis.financing_adjusted_pull_to_par_eur
+        < analysis.gross_pull_to_par_eur
+    )
+    assert analysis.breakeven_repo_rate_percent > 0.0
+    assert analysis.financing_benefit_vs_gc_to_maturity_eur > 0.0
+
+
+def test_discount_security_breakeven_repo_rate_zeroes_net_carry() -> None:
+    base = analyse_discount_security_carry_to_maturity(
+        face_value_eur=10_000_000.0,
+        price_per_100=99.40,
+        redemption_value_per_100=100.0,
+        purchase_date=date(2026, 8, 15),
+        maturity_date=date(2026, 11, 18),
+        repo_rate_percent=1.60,
+        haircut_percent=0.50,
+        day_count_basis=360,
+    )
+
+    breakeven = analyse_discount_security_carry_to_maturity(
+        face_value_eur=10_000_000.0,
+        price_per_100=99.40,
+        redemption_value_per_100=100.0,
+        purchase_date=date(2026, 8, 15),
+        maturity_date=date(2026, 11, 18),
+        repo_rate_percent=base.breakeven_repo_rate_percent,
+        haircut_percent=0.50,
+        day_count_basis=360,
+    )
+
+    assert breakeven.financing_adjusted_pull_to_par_eur == pytest.approx(
+        0.0,
+        abs=1e-6,
+    )

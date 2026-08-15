@@ -27,6 +27,8 @@ PROJECT_MASTER_PATH = Path(
     "data/reference/sovereign_instruments.csv"
 )
 
+EXPECTED_INSTRUMENT_COUNT = 16
+
 
 def project_rows() -> list[
     dict[str, str]
@@ -78,12 +80,12 @@ def write_rows(
         )
 
 
-def test_project_master_loads_twelve_records() -> None:
+def test_project_master_loads_full_universe() -> None:
     records = load_instrument_master()
 
     assert len(
         records
-    ) == 12
+    ) == EXPECTED_INSTRUMENT_COUNT
 
 
 def test_project_master_country_counts() -> None:
@@ -99,6 +101,11 @@ def test_project_master_country_counts() -> None:
         records=records,
     )
 
+    french_records = records_for_country(
+        country=SovereignCountry.FRANCE,
+        records=records,
+    )
+
     assert len(
         german_records
     ) == 7
@@ -106,6 +113,10 @@ def test_project_master_country_counts() -> None:
     assert len(
         italian_records
     ) == 5
+
+    assert len(
+        french_records
+    ) == 4
 
 
 def test_project_master_contains_italian_three_year_area() -> None:
@@ -122,6 +133,35 @@ def test_project_master_contains_italian_three_year_area() -> None:
     assert record.instrument.annual_coupon_rate == pytest.approx(
         0.0045
     )
+
+
+def test_project_master_contains_french_oat_curve() -> None:
+    records = load_instrument_master()
+
+    french_records = records_for_country(
+        country=SovereignCountry.FRANCE,
+        records=records,
+    )
+
+    assert {
+        record.benchmark_tenor_years
+        for record in french_records
+    } == {
+        2,
+        5,
+        10,
+        30,
+    }
+
+    assert {
+        record.instrument.isin
+        for record in french_records
+    } == {
+        "FR001400XLW2",
+        "FR001400Z2L7",
+        "FR0014018YR0",
+        "FR0014016CV2",
+    }
 
 
 def test_primary_benchmark_selection() -> None:
@@ -141,6 +181,23 @@ def test_primary_benchmark_selection() -> None:
     assert instrument.isin == "DE000BU2Z072"
 
 
+def test_french_primary_benchmark_selection() -> None:
+    records = load_instrument_master()
+
+    instrument = primary_benchmark_for_country_tenor(
+        country=SovereignCountry.FRANCE,
+        benchmark_tenor_years=10,
+        records=records,
+    )
+
+    assert isinstance(
+        instrument,
+        SovereignInstrument,
+    )
+
+    assert instrument.isin == "FR0014018YR0"
+
+
 def test_master_records_convert_to_existing_bond_contract() -> None:
     records = load_instrument_master()
 
@@ -153,6 +210,23 @@ def test_master_records_convert_to_existing_bond_contract() -> None:
 
     assert bond.isin == "IT0005706285"
     assert bond.coupon_frequency == 2
+    assert bond.face_value == pytest.approx(
+        100.0
+    )
+
+
+def test_french_oat_converts_to_existing_bond_contract() -> None:
+    records = load_instrument_master()
+
+    record = get_master_record(
+        isin="FR0014018YR0",
+        records=records,
+    )
+
+    bond = record.instrument.to_fixed_rate_bond()
+
+    assert bond.isin == "FR0014018YR0"
+    assert bond.coupon_frequency == 1
     assert bond.face_value == pytest.approx(
         100.0
     )
@@ -172,7 +246,7 @@ def test_instrument_master_frame_contract() -> None:
 
     assert len(
         frame
-    ) == 12
+    ) == EXPECTED_INSTRUMENT_COUNT
 
     assert {
         "isin",
@@ -189,6 +263,16 @@ def test_instrument_master_frame_contract() -> None:
     }.issubset(
         frame.columns
     )
+
+    assert set(
+        frame[
+            "country"
+        ]
+    ) == {
+        SovereignCountry.GERMANY.value,
+        SovereignCountry.ITALY.value,
+        SovereignCountry.FRANCE.value,
+    }
 
 
 def test_missing_file_is_rejected(
@@ -326,6 +410,42 @@ def test_invalid_country_code_is_rejected(
     with pytest.raises(
         InstrumentMasterValidationError,
         match="Germany must use country_code DE",
+    ):
+        load_instrument_master(
+            csv_path
+        )
+
+
+def test_invalid_french_country_code_is_rejected(
+    tmp_path: Path,
+) -> None:
+    rows = project_rows()
+
+    french_row = next(
+        row
+        for row in rows
+        if row[
+            "country"
+        ] == SovereignCountry.FRANCE.value
+    )
+
+    french_row[
+        "country_code"
+    ] = "DE"
+
+    csv_path = (
+        tmp_path
+        / "invalid_french_country_code.csv"
+    )
+
+    write_rows(
+        path=csv_path,
+        rows=rows,
+    )
+
+    with pytest.raises(
+        InstrumentMasterValidationError,
+        match="France must use country_code FR",
     ):
         load_instrument_master(
             csv_path

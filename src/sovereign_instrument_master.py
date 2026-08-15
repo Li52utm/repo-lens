@@ -293,6 +293,7 @@ def validate_country_code(
     expected_codes = {
         SovereignCountry.GERMANY: "DE",
         SovereignCountry.ITALY: "IT",
+        SovereignCountry.FRANCE: "FR",
     }
 
     expected_code = expected_codes[

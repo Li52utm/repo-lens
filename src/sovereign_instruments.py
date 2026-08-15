@@ -29,6 +29,7 @@ class SovereignCountry(StrEnum):
 
     GERMANY = "Germany"
     ITALY = "Italy"
+    FRANCE = "France"
 
 
 class SovereignSecurityType(StrEnum):
@@ -41,6 +42,7 @@ class SovereignSecurityType(StrEnum):
     BUND = "Bund"
     BTP_SHORT_TERM = "BTP Short Term"
     BTP = "BTP"
+    OAT = "OAT"
 
 
 class InstrumentDataStatus(StrEnum):

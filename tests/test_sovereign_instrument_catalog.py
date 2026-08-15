@@ -31,6 +31,9 @@ from src.sovereign_instruments import (
 )
 
 
+EXPECTED_INSTRUMENT_COUNT = 16
+
+
 @pytest.fixture
 def records() -> tuple[
     SovereignInstrumentMasterRecord,
@@ -42,7 +45,7 @@ def records() -> tuple[
     return load_instrument_master()
 
 
-def test_all_master_records_returns_twelve_records(
+def test_all_master_records_returns_full_project_universe(
     records: tuple[
         SovereignInstrumentMasterRecord,
         ...,
@@ -54,7 +57,7 @@ def test_all_master_records_returns_twelve_records(
 
     assert len(
         result
-    ) == 12
+    ) == EXPECTED_INSTRUMENT_COUNT
 
 
 def test_all_instruments_returns_existing_contract(
@@ -69,7 +72,7 @@ def test_all_instruments_returns_existing_contract(
 
     assert len(
         instruments
-    ) == 12
+    ) == EXPECTED_INSTRUMENT_COUNT
 
     assert all(
         isinstance(
@@ -147,6 +150,11 @@ def test_country_filter(
         records=records,
     )
 
+    france = instruments_for_country(
+        country=SovereignCountry.FRANCE,
+        records=records,
+    )
+
     assert len(
         germany
     ) == 7
@@ -155,10 +163,20 @@ def test_country_filter(
         italy
     ) == 5
 
+    assert len(
+        france
+    ) == 4
+
     assert all(
         instrument.country
         == SovereignCountry.GERMANY
         for instrument in germany
+    )
+
+    assert all(
+        instrument.country
+        == SovereignCountry.FRANCE
+        for instrument in france
     )
 
 
@@ -179,6 +197,7 @@ def test_tenor_filter_across_countries(
     } == {
         SovereignCountry.GERMANY,
         SovereignCountry.ITALY,
+        SovereignCountry.FRANCE,
     }
 
 
@@ -213,9 +232,19 @@ def test_security_type_filter(
         records=records,
     )
 
+    oats = instruments_for_security_type(
+        security_type=SovereignSecurityType.OAT,
+        country=SovereignCountry.FRANCE,
+        records=records,
+    )
+
     assert len(
         bunds
     ) == 5
+
+    assert len(
+        oats
+    ) == 4
 
 
 def test_primary_benchmark_lookup(
@@ -231,6 +260,21 @@ def test_primary_benchmark_lookup(
     )
 
     assert instrument.isin == "IT0005706285"
+
+
+def test_french_primary_benchmark_lookup(
+    records: tuple[
+        SovereignInstrumentMasterRecord,
+        ...,
+    ],
+) -> None:
+    instrument = primary_benchmark(
+        country=SovereignCountry.FRANCE,
+        benchmark_tenor_years=10,
+        records=records,
+    )
+
+    assert instrument.isin == "FR0014018YR0"
 
 
 def test_primary_benchmark_missing_for_three_year_sector(
@@ -266,12 +310,21 @@ def test_primary_benchmark_list(
         records=records,
     )
 
+    french_benchmarks = primary_benchmarks(
+        country=SovereignCountry.FRANCE,
+        records=records,
+    )
+
     assert len(
         german_benchmarks
     ) == 7
 
     assert len(
         italian_benchmarks
+    ) == 4
+
+    assert len(
+        french_benchmarks
     ) == 4
 
 
@@ -323,7 +376,7 @@ def test_catalogue_frame_contract(
 
     assert len(
         frame
-    ) == 12
+    ) == EXPECTED_INSTRUMENT_COUNT
 
     assert {
         "isin",
@@ -344,6 +397,16 @@ def test_catalogue_frame_contract(
     assert frame[
         "years_to_maturity_from_source_check"
     ].notna().all()
+
+    assert set(
+        frame[
+            "country"
+        ]
+    ) == {
+        SovereignCountry.GERMANY.value,
+        SovereignCountry.ITALY.value,
+        SovereignCountry.FRANCE.value,
+    }
 
 
 def test_invalid_tenor_is_rejected(
@@ -369,6 +432,6 @@ def test_catalogue_cache_can_be_cleared() -> None:
 
     assert len(
         instruments
-    ) == 12
+    ) == EXPECTED_INSTRUMENT_COUNT
 
     clear_instrument_catalog_cache()
