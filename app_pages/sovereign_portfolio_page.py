@@ -190,13 +190,19 @@ def instrument_label(
     instrument: SovereignInstrument,
 ) -> str:
     """
-    Create a concise instrument selector label.
+    Create a compact desk-style selector label.
     """
+    coupon_percent = (
+        instrument.annual_coupon_rate
+        * 100.0
+    )
+
     return (
-        f"{instrument.country.value} "
-        f"{instrument.benchmark_tenor_years}Y | "
-        f"{instrument.display_name} | "
-        f"{instrument.isin}"
+        f"{instrument.country_code} · "
+        f"{instrument.benchmark_tenor_years}Y · "
+        f"{coupon_percent:.2f}% "
+        f"{instrument.security_type.value} · "
+        f"{instrument.maturity_date.strftime('%b-%Y')}"
     )
 
 
@@ -716,6 +722,22 @@ def main() -> None:
 
         st.stop()
 
+    st.markdown(
+        """
+        <div class="repolens-kicker">
+            European sovereign risk management
+        </div>
+        <div class="repolens-title">
+            Portfolio Risk Book
+        </div>
+        <div class="repolens-subtitle">
+            Aggregate long and short sovereign positions into country,
+            tenor, DV01 and full-repricing scenario risk.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     instruments_by_label = {
         instrument_label(
             instrument
@@ -727,95 +749,88 @@ def main() -> None:
         instruments_by_label
     )
 
-    with st.sidebar.expander(
-        "Portfolio Risk controls",
-        expanded=True,
-    ):
-        position_count = st.number_input(
-            "Number of positions",
-            min_value=1,
-            max_value=8,
-            value=4,
-            step=1,
-            key="portfolio_position_count",
+    with st.container(border=True):
+        st.markdown(
+            '<div class="section-label">Book setup</div>',
+            unsafe_allow_html=True,
         )
 
-        concentration_threshold = st.slider(
-            "Concentration warning threshold",
-            min_value=0.10,
-            max_value=1.00,
-            value=0.50,
-            step=0.05,
-            format="%.0f%%",
-            key="portfolio_concentration_threshold",
-        )
+        setup_left, setup_middle, setup_right = st.columns(3)
 
-    selected_positions: list[
-        dict[str, object]
-    ] = []
-
-    for index in range(
-        int(
-            position_count
-        )
-    ):
-        default = DEFAULT_BOOK[
-            index
-            % len(
-                DEFAULT_BOOK
+        with setup_left:
+            position_count = st.number_input(
+                "Number of positions",
+                min_value=1,
+                max_value=8,
+                value=4,
+                step=1,
+                key="portfolio_position_count",
             )
-        ]
+
+        with setup_middle:
+            concentration_threshold = st.slider(
+                "Concentration warning threshold",
+                min_value=0.10,
+                max_value=1.00,
+                value=0.50,
+                step=0.05,
+                format="%.0f%%",
+                key="portfolio_concentration_threshold",
+            )
+
+        with setup_right:
+            st.caption(
+                "German yields use official daily benchmark data. "
+                "Italian yields remain explicit desk/broker inputs."
+            )
+
+    selected_positions: list[dict[str, object]] = []
+
+    st.markdown(
+        '<div class="section-label">Positions</div>',
+        unsafe_allow_html=True,
+    )
+
+    for index in range(int(position_count)):
+        default = DEFAULT_BOOK[index % len(DEFAULT_BOOK)]
 
         default_label = find_default_label(
             instruments_by_label=instruments_by_label,
-            country=default[
-                "country"
-            ],
-            tenor_years=int(
-                default[
-                    "tenor"
-                ]
-            ),
+            country=default["country"],
+            tenor_years=int(default["tenor"]),
         )
 
-        with st.sidebar.expander(
-            f"Position {index + 1}",
-            expanded=(
-                index < 4
-            ),
-        ):
-            selected_label = st.selectbox(
-                "Instrument",
-                options=labels,
-                index=labels.index(
-                    default_label
-                ),
-                key=f"portfolio_instrument_{index}",
+        with st.container(border=True):
+            st.markdown(f"**POS-{index + 1:02d}**")
+
+            top_left, top_middle, top_right = st.columns(
+                [2.4, 1.0, 1.2]
             )
 
-            selected_instrument = instruments_by_label[
-                selected_label
-            ]
+            with top_left:
+                selected_label = st.selectbox(
+                    "Instrument",
+                    options=labels,
+                    index=labels.index(default_label),
+                    key=f"portfolio_instrument_{index}",
+                )
 
-            default_direction = default[
-                "direction"
-            ]
+            selected_instrument = instruments_by_label[selected_label]
 
-            direction_text = st.radio(
-                "Direction",
-                options=[
-                    "Long",
-                    "Short",
-                ],
-                index=(
-                    0
-                    if default_direction
-                    == PositionDirection.LONG
-                    else 1
-                ),
-                horizontal=True,
-                key=f"portfolio_direction_{index}",
-            )
+            default_direction = default["direction"]
+
+            with top_middle:
+                direction_text = st.radio(
+                    "Direction",
+                    options=["Long", "Short"],
+                    index=(
+                        0
+                        if default_direction == PositionDirection.LONG
+                        else 1
+                    ),
+                    horizontal=True,
+                    key=f"portfolio_direction_{index}",
+                )
 
             direction = (
                 PositionDirection.LONG
@@ -823,54 +838,51 @@ def main() -> None:
                 else PositionDirection.SHORT
             )
 
-            notional_eur = st.number_input(
-                "Face value (€)",
-                min_value=1_000_000.0,
-                value=float(
-                    default[
-                        "notional"
-                    ]
-                ),
-                step=1_000_000.0,
-                format="%.0f",
-                key=f"portfolio_notional_{index}",
+            with top_right:
+                notional_eur = st.number_input(
+                    "Face value (€)",
+                    min_value=1_000_000.0,
+                    value=float(default["notional"]),
+                    step=1_000_000.0,
+                    format="%.0f",
+                    key=f"portfolio_notional_{index}",
+                )
+
+            st.caption(
+                f"{selected_instrument.display_name} · "
+                f"{selected_instrument.isin}"
             )
 
             matched_german_yield = latest_german_yield(
                 benchmark_data=benchmark_data,
-                tenor_years=(
-                    selected_instrument
-                    .benchmark_tenor_years
-                ),
+                tenor_years=selected_instrument.benchmark_tenor_years,
             )
 
             yield_percent: float | None = None
             source_name: str | None = None
 
-            if (
-                selected_instrument.country
-                == SovereignCountry.ITALY
-            ):
-                yield_percent = float(
-                    st.number_input(
-                        "Desk-input yield (%)",
-                        min_value=-10.0,
-                        max_value=25.0,
-                        value=float(
-                            matched_german_yield
-                            + 1.00
-                        ),
-                        step=0.01,
-                        format="%.3f",
-                        key=f"portfolio_yield_{index}",
-                    )
-                )
+            if selected_instrument.country == SovereignCountry.ITALY:
+                market_left, market_right = st.columns(2)
 
-                source_name = st.text_input(
-                    "Yield source",
-                    value="Desk input",
-                    key=f"portfolio_source_{index}",
-                )
+                with market_left:
+                    yield_percent = float(
+                        st.number_input(
+                            "Desk-input yield (%)",
+                            min_value=-10.0,
+                            max_value=25.0,
+                            value=float(matched_german_yield + 1.00),
+                            step=0.01,
+                            format="%.3f",
+                            key=f"portfolio_yield_{index}",
+                        )
+                    )
+
+                with market_right:
+                    source_name = st.text_input(
+                        "Yield source",
+                        value="Desk input",
+                        key=f"portfolio_source_{index}",
+                    )
             else:
                 st.caption(
                     "Official German benchmark yield: "
@@ -879,34 +891,24 @@ def main() -> None:
 
             selected_positions.append(
                 {
-                    "position_id": (
-                        f"POS-{index + 1:02d}"
-                    ),
+                    "position_id": f"POS-{index + 1:02d}",
                     "instrument": selected_instrument,
                     "direction": direction,
-                    "notional_eur": float(
-                        notional_eur
-                    ),
+                    "notional_eur": float(notional_eur),
                     "yield_percent": yield_percent,
                     "source_name": source_name,
                 }
             )
 
     earliest_settlement = max(
-        position[
-            "instrument"
-        ].issue_date
+        position["instrument"].issue_date
         for position in selected_positions
     )
 
     latest_settlement = min(
-        position[
-            "instrument"
-        ].maturity_date
+        position["instrument"].maturity_date
         for position in selected_positions
-    ) - timedelta(
-        days=1
-    )
+    ) - timedelta(days=1)
 
     default_settlement = max(
         earliest_settlement,
@@ -918,17 +920,23 @@ def main() -> None:
         latest_settlement,
     )
 
-    with st.sidebar.expander(
-        "Valuation date",
-        expanded=True,
-    ):
-        settlement_date = st.date_input(
-            "Settlement date",
-            value=default_settlement,
-            min_value=earliest_settlement,
-            max_value=latest_settlement,
-            key="portfolio_settlement_date",
-        )
+    with st.container(border=True):
+        valuation_left, valuation_right = st.columns([1, 2])
+
+        with valuation_left:
+            settlement_date = st.date_input(
+                "Settlement date",
+                value=default_settlement,
+                min_value=earliest_settlement,
+                max_value=latest_settlement,
+                key="portfolio_settlement_date",
+            )
+
+        with valuation_right:
+            st.caption(
+                "All positions are valued on the same settlement date. "
+                "RepoLens uses full bond repricing for scenario analysis."
+            )
 
     portfolio_positions: list[
         SovereignPortfolioPosition
@@ -1032,22 +1040,6 @@ def main() -> None:
         )
 
         st.stop()
-
-    st.markdown(
-        """
-        <div class="repolens-kicker">
-            European sovereign risk management
-        </div>
-        <div class="repolens-title">
-            Portfolio Risk Book
-        </div>
-        <div class="repolens-subtitle">
-            Aggregate long and short Bund and BTP positions into
-            country, tenor, DV01 and full-repricing scenario risk.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
     if summary.concentration_warning:
         st.markdown(
