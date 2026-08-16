@@ -27,6 +27,11 @@ from src.repo_market_state import (
     SpecificRepoQuote,
     compare_specific_to_gc,
 )
+from src.repo_specialness_store import (
+    RepoSpecialnessStoreError,
+    append_repo_specialness_record,
+    stored_record_from_market_state,
+)
 from src.sovereign_instrument_catalog import (
     all_instruments,
     master_record_by_isin,
@@ -194,6 +199,16 @@ def main() -> None:
 
     structured_specialness: (
         RepoSpecialnessResult
+        | None
+    ) = None
+
+    structured_specific_quote: (
+        SpecificRepoQuote
+        | None
+    ) = None
+
+    structured_gc_reference: (
+        GCReference
         | None
     ) = None
 
@@ -866,49 +881,61 @@ def main() -> None:
                 )
             )
 
+            structured_specific_quote = (
+                SpecificRepoQuote(
+                    isin=(
+                        selected_collateral_isin
+                    ),
+                    currency=(
+                        selected_collateral_currency
+                    ),
+                    repo_days=result.repo_days,
+                    rate_percent=float(
+                        repo_rate_percent
+                    ),
+                    quote_timestamp=(
+                        input_capture_timestamp
+                    ),
+                    source_name=(
+                        specific_quote_source_name
+                    ),
+                    source_type=(
+                        specific_quote_source_type
+                    ),
+                )
+            )
+
+            structured_gc_reference = (
+                GCReference(
+                    currency=(
+                        selected_collateral_currency
+                    ),
+                    repo_days=result.repo_days,
+                    rate_percent=float(
+                        gc_repo_rate_percent
+                    ),
+                    quote_timestamp=(
+                        input_capture_timestamp
+                    ),
+                    source_name=(
+                        gc_quote_source_name
+                    ),
+                    source_type=(
+                        gc_quote_source_type
+                    ),
+                    basket_name=(
+                        "User-supplied GC reference"
+                    ),
+                )
+            )
+
             structured_specialness = (
                 compare_specific_to_gc(
-                    specific_quote=SpecificRepoQuote(
-                        isin=(
-                            selected_collateral_isin
-                        ),
-                        currency=(
-                            selected_collateral_currency
-                        ),
-                        repo_days=result.repo_days,
-                        rate_percent=float(
-                            repo_rate_percent
-                        ),
-                        quote_timestamp=(
-                            input_capture_timestamp
-                        ),
-                        source_name=(
-                            specific_quote_source_name
-                        ),
-                        source_type=(
-                            specific_quote_source_type
-                        ),
+                    specific_quote=(
+                        structured_specific_quote
                     ),
-                    gc_reference=GCReference(
-                        currency=(
-                            selected_collateral_currency
-                        ),
-                        repo_days=result.repo_days,
-                        rate_percent=float(
-                            gc_repo_rate_percent
-                        ),
-                        quote_timestamp=(
-                            input_capture_timestamp
-                        ),
-                        source_name=(
-                            gc_quote_source_name
-                        ),
-                        source_type=(
-                            gc_quote_source_type
-                        ),
-                        basket_name=(
-                            "User-supplied GC reference"
-                        ),
+                    gc_reference=(
+                        structured_gc_reference
                     ),
                     purchase_price_eur=(
                         result.purchase_price_eur
@@ -1519,6 +1546,90 @@ def main() -> None:
                 f"{structured_specialness.specific_quote_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}"
             )
 
+            with st.container(
+                border=True
+            ):
+                save_left, save_right = st.columns(
+                    [
+                        3,
+                        1,
+                    ],
+                    vertical_alignment="center",
+                )
+
+                with save_left:
+                    st.markdown(
+                        "**Historical specialness observation**"
+                    )
+                    st.caption(
+                        "Nothing is written automatically. Save only when "
+                        "the displayed specific-repo and GC inputs represent "
+                        "an observation you want included in RepoLens history."
+                    )
+
+                with save_right:
+                    save_market_observation = st.button(
+                        "Save market observation",
+                        key="repo_save_market_observation",
+                        type="primary",
+                        width="stretch",
+                    )
+
+                if save_market_observation:
+                    if (
+                        structured_specific_quote is None
+                        or structured_gc_reference is None
+                    ):
+                        st.error(
+                            "RepoLens could not reconstruct the structured "
+                            "quote pair for persistence."
+                        )
+                    else:
+                        try:
+                            stored_record = (
+                                stored_record_from_market_state(
+                                    specific_quote=(
+                                        structured_specific_quote
+                                    ),
+                                    gc_reference=(
+                                        structured_gc_reference
+                                    ),
+                                    result=(
+                                        structured_specialness
+                                    ),
+                                )
+                            )
+
+                            append_repo_specialness_record(
+                                stored_record
+                            )
+
+                        except (
+                            RepoSpecialnessStoreError,
+                            OSError,
+                        ) as error:
+                            st.error(
+                                "RepoLens could not save this market observation."
+                            )
+                            st.code(
+                                str(
+                                    error
+                                )
+                            )
+
+                        else:
+                            st.success(
+                                "Market observation saved to "
+                                "data/market/repo_specialness_history.csv."
+                            )
+                            st.caption(
+                                f"Saved {stored_record.isin} · "
+                                f"{stored_record.currency} · "
+                                f"{stored_record.repo_days}-day · "
+                                f"{stored_record.specialness_bp:+.2f} bp "
+                                "specialness."
+                            )
+
         else:
             st.caption(
                 "Manual collateral has no structured RepoLens ISIN/currency "
@@ -1644,6 +1755,10 @@ def main() -> None:
             RepoLens also records user-supplied GC and specific-quote
             provenance and requires the comparison to match on currency
             and repo term.
+
+            Historical repo observations are persisted only when the user
+            explicitly selects **Save market observation**. Streamlit reruns
+            do not automatically write market history.
 
             Schedule-derived accrued interest, remaining-maturity buckets,
             cash, repo-interest, specialness, pull-to-par, financed carry,
