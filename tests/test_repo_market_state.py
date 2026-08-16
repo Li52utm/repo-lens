@@ -7,6 +7,7 @@ from src.repo_market_state import (
     RepoMarketStateValidationError,
     RepoQuoteSourceType,
     SpecificRepoQuote,
+    calculate_financing_benefit_vs_gc_eur,
     calculate_specialness_bp,
     compare_specific_to_gc,
 )
@@ -194,4 +195,138 @@ def test_invalid_isin_is_rejected() -> None:
             ),
             source_name="Broker quote",
             source_type=RepoQuoteSourceType.BROKER_INPUT,
+        )
+
+
+
+def test_financing_benefit_vs_gc_uses_purchase_price_and_term() -> None:
+    benefit = calculate_financing_benefit_vs_gc_eur(
+        purchase_price_eur=10_000_000.0,
+        gc_repo_rate_percent=2.10,
+        specific_repo_rate_percent=1.41,
+        repo_days=7,
+        day_count_basis=360,
+    )
+
+    expected = (
+        10_000_000.0
+        * (
+            0.69
+            / 100.0
+        )
+        * 7
+        / 360
+    )
+
+    assert benefit == pytest.approx(
+        expected
+    )
+
+
+def test_financing_benefit_is_negative_when_specific_funds_above_gc() -> None:
+    benefit = calculate_financing_benefit_vs_gc_eur(
+        purchase_price_eur=5_000_000.0,
+        gc_repo_rate_percent=2.00,
+        specific_repo_rate_percent=2.20,
+        repo_days=30,
+        day_count_basis=360,
+    )
+
+    assert benefit < 0.0
+
+
+def test_structured_comparison_can_include_cash_financing_benefit() -> None:
+    timestamp = datetime(
+        2026,
+        8,
+        15,
+        10,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+    gc = GCReference(
+        currency="EUR",
+        repo_days=7,
+        rate_percent=2.10,
+        quote_timestamp=timestamp,
+        source_name="Desk GC",
+        source_type=RepoQuoteSourceType.DESK_INPUT,
+    )
+
+    specific = SpecificRepoQuote(
+        isin="FR0014018YR0",
+        currency="EUR",
+        repo_days=7,
+        rate_percent=1.41,
+        quote_timestamp=timestamp,
+        source_name="Broker",
+        source_type=RepoQuoteSourceType.BROKER_INPUT,
+    )
+
+    result = compare_specific_to_gc(
+        specific_quote=specific,
+        gc_reference=gc,
+        purchase_price_eur=10_000_000.0,
+        day_count_basis=360,
+    )
+
+    assert result.specialness_bp == pytest.approx(
+        69.0
+    )
+
+    assert result.purchase_price_eur == pytest.approx(
+        10_000_000.0
+    )
+
+    assert result.day_count_basis == 360
+
+    assert result.financing_benefit_vs_gc_eur == pytest.approx(
+        10_000_000.0
+        * (
+            0.69
+            / 100.0
+        )
+        * 7
+        / 360
+    )
+
+
+def test_cash_economics_inputs_must_be_supplied_together() -> None:
+    timestamp = datetime(
+        2026,
+        8,
+        15,
+        10,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+    gc = GCReference(
+        currency="EUR",
+        repo_days=1,
+        rate_percent=2.10,
+        quote_timestamp=timestamp,
+        source_name="Desk GC",
+        source_type=RepoQuoteSourceType.DESK_INPUT,
+    )
+
+    specific = SpecificRepoQuote(
+        isin="DE000BU22148",
+        currency="EUR",
+        repo_days=1,
+        rate_percent=1.90,
+        quote_timestamp=timestamp,
+        source_name="Broker",
+        source_type=RepoQuoteSourceType.BROKER_INPUT,
+    )
+
+    with pytest.raises(
+        RepoMarketStateValidationError,
+        match="supplied together",
+    ):
+        compare_specific_to_gc(
+            specific_quote=specific,
+            gc_reference=gc,
+            purchase_price_eur=10_000_000.0,
         )

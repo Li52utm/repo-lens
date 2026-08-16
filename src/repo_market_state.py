@@ -181,6 +181,9 @@ class RepoSpecialnessResult:
     gc_quote_timestamp: datetime
     specific_source_name: str
     gc_source_name: str
+    purchase_price_eur: float | None
+    day_count_basis: int | None
+    financing_benefit_vs_gc_eur: float | None
 
 
 def calculate_specialness_bp(
@@ -217,10 +220,73 @@ def calculate_specialness_bp(
     ) * BASIS_POINTS_PER_PERCENT
 
 
+def calculate_financing_benefit_vs_gc_eur(
+    *,
+    purchase_price_eur: float,
+    gc_repo_rate_percent: float,
+    specific_repo_rate_percent: float,
+    repo_days: int,
+    day_count_basis: int,
+) -> float:
+    """
+    Calculate the cash financing advantage of a specific repo rate versus GC.
+
+    Positive values mean the specific collateral finances more cheaply than
+    the matched GC reference over the repo term.
+
+    The calculation uses simple money-market interest:
+
+        purchase price
+        × (GC rate - specific rate)
+        × repo days / day-count basis
+    """
+    if not isfinite(purchase_price_eur):
+        raise RepoMarketStateValidationError(
+            "purchase_price_eur must be finite."
+        )
+
+    if purchase_price_eur < 0.0:
+        raise RepoMarketStateValidationError(
+            "purchase_price_eur must not be negative."
+        )
+
+    if repo_days <= 0:
+        raise RepoMarketStateValidationError(
+            "repo_days must be positive."
+        )
+
+    if day_count_basis not in {
+        360,
+        365,
+    }:
+        raise RepoMarketStateValidationError(
+            "day_count_basis must be 360 or 365."
+        )
+
+    specialness_bp = calculate_specialness_bp(
+        gc_repo_rate_percent=gc_repo_rate_percent,
+        specific_repo_rate_percent=specific_repo_rate_percent,
+    )
+
+    rate_difference_decimal = (
+        specialness_bp
+        / 10_000.0
+    )
+
+    return (
+        purchase_price_eur
+        * rate_difference_decimal
+        * repo_days
+        / day_count_basis
+    )
+
+
 def compare_specific_to_gc(
     *,
     specific_quote: SpecificRepoQuote,
     gc_reference: GCReference,
+    purchase_price_eur: float | None = None,
+    day_count_basis: int | None = None,
 ) -> RepoSpecialnessResult:
     """
     Compare a specific-repo quote with a term- and currency-matched GC quote.
@@ -246,6 +312,30 @@ def compare_specific_to_gc(
         specific_repo_rate_percent=specific_quote.rate_percent,
     )
 
+    if (
+        (purchase_price_eur is None)
+        != (day_count_basis is None)
+    ):
+        raise RepoMarketStateValidationError(
+            "purchase_price_eur and day_count_basis must be supplied together."
+        )
+
+    financing_benefit_vs_gc_eur: float | None = None
+
+    if (
+        purchase_price_eur is not None
+        and day_count_basis is not None
+    ):
+        financing_benefit_vs_gc_eur = (
+            calculate_financing_benefit_vs_gc_eur(
+                purchase_price_eur=purchase_price_eur,
+                gc_repo_rate_percent=gc_reference.rate_percent,
+                specific_repo_rate_percent=specific_quote.rate_percent,
+                repo_days=specific_quote.repo_days,
+                day_count_basis=day_count_basis,
+            )
+        )
+
     quote_time_difference_seconds = abs(
         (
             specific_quote.quote_timestamp
@@ -265,4 +355,7 @@ def compare_specific_to_gc(
         gc_quote_timestamp=gc_reference.quote_timestamp,
         specific_source_name=specific_quote.source_name,
         gc_source_name=gc_reference.source_name,
+        purchase_price_eur=purchase_price_eur,
+        day_count_basis=day_count_basis,
+        financing_benefit_vs_gc_eur=financing_benefit_vs_gc_eur,
     )

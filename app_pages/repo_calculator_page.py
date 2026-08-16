@@ -910,6 +910,12 @@ def main() -> None:
                             "User-supplied GC reference"
                         ),
                     ),
+                    purchase_price_eur=(
+                        result.purchase_price_eur
+                    ),
+                    day_count_basis=int(
+                        day_count_basis
+                    ),
                 )
             )
 
@@ -1477,10 +1483,21 @@ def main() -> None:
             border=True,
         )
 
+        displayed_financing_benefit = (
+            structured_specialness.financing_benefit_vs_gc_eur
+            if (
+                structured_specialness is not None
+                and structured_specialness
+                .financing_benefit_vs_gc_eur
+                is not None
+            )
+            else result.financing_benefit_vs_gc_eur
+        )
+
         special_columns[3].metric(
             "Financing benefit vs GC",
             format_euro(
-                result.financing_benefit_vs_gc_eur,
+                displayed_financing_benefit,
                 decimals=2,
             ),
             delta="Over the selected repo term",
