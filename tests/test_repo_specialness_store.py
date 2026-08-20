@@ -5,6 +5,8 @@ import pytest
 
 from src.repo_market_state import (
     GCReference,
+    RepoClearingType,
+    RepoCounterpartySegment,
     RepoQuoteSourceType,
     SpecificRepoQuote,
     compare_specific_to_gc,
@@ -50,8 +52,12 @@ def market_state_record(
         quote_timestamp=timestamp,
         source_name="Desk GC",
         source_type=RepoQuoteSourceType.DESK_INPUT,
-        basket_name="EUR GC",
-        venue="Desk",
+        basket_name="EUR sovereign GC",
+        venue="Venue A",
+        clearing_type=RepoClearingType.CCP_CLEARED,
+        counterparty_segment=(
+            RepoCounterpartySegment.DEALER_TO_DEALER
+        ),
     )
 
     specific = SpecificRepoQuote(
@@ -62,7 +68,11 @@ def market_state_record(
         quote_timestamp=timestamp,
         source_name="Broker quote",
         source_type=RepoQuoteSourceType.BROKER_INPUT,
-        venue="Broker",
+        venue="Venue A",
+        clearing_type=RepoClearingType.CCP_CLEARED,
+        counterparty_segment=(
+            RepoCounterpartySegment.DEALER_TO_DEALER
+        ),
     )
 
     result = compare_specific_to_gc(
@@ -281,12 +291,24 @@ def test_market_state_record_preserves_provenance_and_cash_economics() -> None:
 
     assert record.specific_source_name == "Broker quote"
     assert record.specific_source_type == RepoQuoteSourceType.BROKER_INPUT
-    assert record.specific_venue == "Broker"
+    assert record.specific_venue == "Venue A"
+    assert record.specific_clearing_type == (
+        RepoClearingType.CCP_CLEARED
+    )
+    assert record.specific_counterparty_segment == (
+        RepoCounterpartySegment.DEALER_TO_DEALER
+    )
 
     assert record.gc_source_name == "Desk GC"
     assert record.gc_source_type == RepoQuoteSourceType.DESK_INPUT
-    assert record.gc_basket_name == "EUR GC"
-    assert record.gc_venue == "Desk"
+    assert record.gc_basket_name == "EUR sovereign GC"
+    assert record.gc_venue == "Venue A"
+    assert record.gc_clearing_type == (
+        RepoClearingType.CCP_CLEARED
+    )
+    assert record.gc_counterparty_segment == (
+        RepoCounterpartySegment.DEALER_TO_DEALER
+    )
 
     assert record.purchase_price_eur == pytest.approx(
         10_000_000.0
@@ -318,3 +340,22 @@ def test_bad_csv_schema_is_rejected(
         load_repo_specialness_records(
             path
         )
+
+
+
+def test_schema_persists_market_context_dimensions() -> None:
+    expected = {
+        "specific_venue",
+        "specific_clearing_type",
+        "specific_counterparty_segment",
+        "gc_basket_name",
+        "gc_venue",
+        "gc_clearing_type",
+        "gc_counterparty_segment",
+    }
+
+    assert expected.issubset(
+        set(
+            REPO_SPECIALNESS_HISTORY_COLUMNS
+        )
+    )

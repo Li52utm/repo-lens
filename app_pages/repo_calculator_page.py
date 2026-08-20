@@ -21,15 +21,24 @@ from src.repo_analytics import (
 )
 from src.repo_market_state import (
     GCReference,
+    RepoClearingType,
+    RepoCounterpartySegment,
     RepoMarketStateValidationError,
     RepoQuoteSourceType,
     RepoSpecialnessResult,
     SpecificRepoQuote,
     compare_specific_to_gc,
 )
+from src.repo_specialness_history import (
+    RepoSpecialnessHistoryValidationError,
+    analyse_specialness_history,
+    observation_from_result,
+)
 from src.repo_specialness_store import (
     RepoSpecialnessStoreError,
     append_repo_specialness_record,
+    history_observations_for_market,
+    load_repo_specialness_records,
     stored_record_from_market_state,
 )
 from src.sovereign_instrument_catalog import (
@@ -51,6 +60,31 @@ def format_euro(
     Format a euro amount.
     """
     return f"€{value:,.{decimals}f}"
+
+
+def format_optional_bp(
+    value: float | None,
+    decimals: int = 2,
+) -> str:
+    """
+    Format an optional basis-point value.
+    """
+    if value is None:
+        return "N/A"
+
+    return f"{value:+,.{decimals}f} bp"
+
+
+def format_optional_z_score(
+    value: float | None,
+) -> str:
+    """
+    Format an optional z-score.
+    """
+    if value is None:
+        return "N/A"
+
+    return f"{value:+.2f}σ"
 
 
 def coupon_instrument_label(
@@ -705,6 +739,26 @@ def main() -> None:
                 RepoQuoteSourceType.DESK_INPUT
             )
 
+            quote_timestamp_mode = (
+                "Input capture time"
+            )
+            explicit_specific_quote_date = None
+            explicit_specific_quote_time = None
+            explicit_gc_quote_date = None
+            explicit_gc_quote_time = None
+
+            specific_quote_venue = ""
+            gc_quote_venue = ""
+            gc_basket_name = ""
+            specific_clearing_type = RepoClearingType.UNSPECIFIED
+            gc_clearing_type = RepoClearingType.UNSPECIFIED
+            specific_counterparty_segment = (
+                RepoCounterpartySegment.UNSPECIFIED
+            )
+            gc_counterparty_segment = (
+                RepoCounterpartySegment.UNSPECIFIED
+            )
+
             if compare_with_gc:
                 gc_repo_rate_percent = st.number_input(
                     "GC repo rate (%)",
@@ -797,12 +851,222 @@ def main() -> None:
                             )
                         )
 
-                    st.caption(
-                        "RepoLens records these as user-supplied quote "
-                        "provenance. The timestamp shown below is the "
-                        "calculator input-capture time, not an exchange "
-                        "or broker execution timestamp."
+                    st.markdown(
+                        "**Market context**"
                     )
+
+                    context_left, context_right = st.columns(2)
+
+                    with context_left:
+                        specific_quote_venue = st.text_input(
+                            "Specific quote venue",
+                            value="",
+                            placeholder="e.g. broker, CCP venue, bilateral",
+                            key="repo_specific_quote_venue",
+                        )
+
+                    with context_right:
+                        gc_quote_venue = st.text_input(
+                            "GC reference venue",
+                            value="",
+                            placeholder="e.g. Eurex, desk composite",
+                            key="repo_gc_quote_venue",
+                        )
+
+                    gc_basket_name = st.text_input(
+                        "GC basket / reference identity",
+                        value="",
+                        placeholder="e.g. EUR sovereign GC, GC Pooling basket",
+                        key="repo_gc_basket_name",
+                        help=(
+                            "Name the GC basket or reference explicitly. "
+                            "RepoLens does not assume all GC observations "
+                            "refer to the same collateral pool."
+                        ),
+                    )
+
+                    clearing_left, clearing_right = st.columns(2)
+
+                    with clearing_left:
+                        specific_clearing_type = st.selectbox(
+                            "Specific clearing type",
+                            options=list(RepoClearingType),
+                            index=0,
+                            format_func=lambda item: (
+                                item.value.replace("_", " ").title()
+                            ),
+                            key="repo_specific_clearing_type",
+                        )
+
+                    with clearing_right:
+                        gc_clearing_type = st.selectbox(
+                            "GC clearing type",
+                            options=list(RepoClearingType),
+                            index=0,
+                            format_func=lambda item: (
+                                item.value.replace("_", " ").title()
+                            ),
+                            key="repo_gc_clearing_type",
+                        )
+
+                    segment_left, segment_right = st.columns(2)
+
+                    with segment_left:
+                        specific_counterparty_segment = st.selectbox(
+                            "Specific market segment",
+                            options=list(RepoCounterpartySegment),
+                            index=0,
+                            format_func=lambda item: (
+                                item.value.replace("_", " ").title()
+                            ),
+                            key="repo_specific_counterparty_segment",
+                        )
+
+                    with segment_right:
+                        gc_counterparty_segment = st.selectbox(
+                            "GC market segment",
+                            options=list(RepoCounterpartySegment),
+                            index=0,
+                            format_func=lambda item: (
+                                item.value.replace("_", " ").title()
+                            ),
+                            key="repo_gc_counterparty_segment",
+                        )
+
+                    st.caption(
+                        "Venue, clearing and market-segment fields are "
+                        "comparison context. RepoLens flags differences "
+                        "rather than assuming the observations are identical."
+                    )
+
+                    st.divider()
+
+                    quote_timestamp_mode = (
+                        st.radio(
+                            "Quote timestamp treatment",
+                            options=[
+                                "Input capture time",
+                                "Explicit quote time",
+                            ],
+                            index=0,
+                            horizontal=True,
+                            key=(
+                                "repo_quote_timestamp_mode"
+                            ),
+                            help=(
+                                "Use input capture time only when the entered "
+                                "rates represent the current observed market. "
+                                "Use explicit quote time for broker, venue or "
+                                "desk observations received earlier."
+                            ),
+                        )
+                    )
+
+                    if (
+                        quote_timestamp_mode
+                        == "Explicit quote time"
+                    ):
+                        timestamp_now_utc = (
+                            datetime.now(
+                                timezone.utc
+                            )
+                        )
+
+                        specific_time_left, specific_time_right = (
+                            st.columns(
+                                2
+                            )
+                        )
+
+                        with specific_time_left:
+                            explicit_specific_quote_date = (
+                                st.date_input(
+                                    "Specific quote date (UTC)",
+                                    value=(
+                                        timestamp_now_utc.date()
+                                    ),
+                                    key=(
+                                        "repo_specific_quote_date"
+                                    ),
+                                )
+                            )
+
+                        with specific_time_right:
+                            explicit_specific_quote_time = (
+                                st.time_input(
+                                    "Specific quote time (UTC)",
+                                    value=(
+                                        timestamp_now_utc
+                                        .replace(
+                                            second=0,
+                                            microsecond=0,
+                                        )
+                                        .timetz()
+                                        .replace(
+                                            tzinfo=None
+                                        )
+                                    ),
+                                    step=60,
+                                    key=(
+                                        "repo_specific_quote_time"
+                                    ),
+                                )
+                            )
+
+                        gc_time_left, gc_time_right = (
+                            st.columns(
+                                2
+                            )
+                        )
+
+                        with gc_time_left:
+                            explicit_gc_quote_date = (
+                                st.date_input(
+                                    "GC quote date (UTC)",
+                                    value=(
+                                        timestamp_now_utc.date()
+                                    ),
+                                    key=(
+                                        "repo_gc_quote_date"
+                                    ),
+                                )
+                            )
+
+                        with gc_time_right:
+                            explicit_gc_quote_time = (
+                                st.time_input(
+                                    "GC quote time (UTC)",
+                                    value=(
+                                        timestamp_now_utc
+                                        .replace(
+                                            second=0,
+                                            microsecond=0,
+                                        )
+                                        .timetz()
+                                        .replace(
+                                            tzinfo=None
+                                        )
+                                    ),
+                                    step=60,
+                                    key=(
+                                        "repo_gc_quote_time"
+                                    ),
+                                )
+                            )
+
+                        st.caption(
+                            "Explicit timestamps are interpreted as UTC. "
+                            "RepoLens preserves separate specific and GC quote "
+                            "times and reports their time gap."
+                        )
+
+                    else:
+                        st.caption(
+                            "RepoLens will stamp both observations with the "
+                            "current UTC calculator capture time. This should "
+                            "only be used when the entered rates represent the "
+                            "market observed now."
+                        )
 
     try:
         trade = RepoTradeInput(
@@ -881,6 +1145,53 @@ def main() -> None:
                 )
             )
 
+            if (
+                quote_timestamp_mode
+                == "Explicit quote time"
+                and explicit_specific_quote_date
+                is not None
+                and explicit_specific_quote_time
+                is not None
+                and explicit_gc_quote_date
+                is not None
+                and explicit_gc_quote_time
+                is not None
+            ):
+                specific_observation_timestamp = (
+                    datetime.combine(
+                        explicit_specific_quote_date,
+                        explicit_specific_quote_time,
+                        tzinfo=timezone.utc,
+                    )
+                )
+
+                gc_observation_timestamp = (
+                    datetime.combine(
+                        explicit_gc_quote_date,
+                        explicit_gc_quote_time,
+                        tzinfo=timezone.utc,
+                    )
+                )
+
+                if (
+                    specific_observation_timestamp
+                    > input_capture_timestamp
+                    or gc_observation_timestamp
+                    > input_capture_timestamp
+                ):
+                    raise RepoMarketStateValidationError(
+                        "Explicit quote timestamps must not be later than "
+                        "the current UTC input-capture time."
+                    )
+
+            else:
+                specific_observation_timestamp = (
+                    input_capture_timestamp
+                )
+                gc_observation_timestamp = (
+                    input_capture_timestamp
+                )
+
             structured_specific_quote = (
                 SpecificRepoQuote(
                     isin=(
@@ -894,13 +1205,23 @@ def main() -> None:
                         repo_rate_percent
                     ),
                     quote_timestamp=(
-                        input_capture_timestamp
+                        specific_observation_timestamp
                     ),
                     source_name=(
                         specific_quote_source_name
                     ),
                     source_type=(
                         specific_quote_source_type
+                    ),
+                    venue=(
+                        specific_quote_venue.strip()
+                        or None
+                    ),
+                    clearing_type=(
+                        specific_clearing_type
+                    ),
+                    counterparty_segment=(
+                        specific_counterparty_segment
                     ),
                 )
             )
@@ -915,7 +1236,7 @@ def main() -> None:
                         gc_repo_rate_percent
                     ),
                     quote_timestamp=(
-                        input_capture_timestamp
+                        gc_observation_timestamp
                     ),
                     source_name=(
                         gc_quote_source_name
@@ -924,7 +1245,18 @@ def main() -> None:
                         gc_quote_source_type
                     ),
                     basket_name=(
-                        "User-supplied GC reference"
+                        gc_basket_name.strip()
+                        or None
+                    ),
+                    venue=(
+                        gc_quote_venue.strip()
+                        or None
+                    ),
+                    clearing_type=(
+                        gc_clearing_type
+                    ),
+                    counterparty_segment=(
+                        gc_counterparty_segment
                     ),
                 )
             )
@@ -1541,10 +1873,279 @@ def main() -> None:
                 f"specific source: "
                 f"{structured_specialness.specific_source_name} · "
                 f"GC source: "
-                f"{structured_specialness.gc_source_name} · "
-                f"input captured "
-                f"{structured_specialness.specific_quote_timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}"
+                f"{structured_specialness.gc_source_name}"
             )
+
+            timestamp_columns = st.columns(
+                3
+            )
+
+            timestamp_columns[0].metric(
+                "Specific quote time",
+                (
+                    structured_specialness
+                    .specific_quote_timestamp
+                    .strftime("%Y-%m-%d %H:%M UTC")
+                ),
+                border=True,
+            )
+
+            timestamp_columns[1].metric(
+                "GC quote time",
+                (
+                    structured_specialness
+                    .gc_quote_timestamp
+                    .strftime("%Y-%m-%d %H:%M UTC")
+                ),
+                border=True,
+            )
+
+            timestamp_columns[2].metric(
+                "Quote time gap",
+                (
+                    f"{structured_specialness.quote_time_difference_seconds:,.0f} sec"
+                ),
+                delta=(
+                    quote_timestamp_mode
+                ),
+                delta_color="off",
+                border=True,
+            )
+
+            comparison_context = (
+                structured_specialness.comparison_context
+            )
+
+            if comparison_context is not None:
+                st.markdown(
+                    '<div class="section-label">Comparison quality</div>',
+                    unsafe_allow_html=True,
+                )
+
+                comparison_columns = st.columns(4)
+
+                def context_label(
+                    value: bool | None,
+                ) -> str:
+                    if value is True:
+                        return "Matched"
+                    if value is False:
+                        return "Different"
+                    return "Unknown"
+
+                comparison_columns[0].metric(
+                    "Venue",
+                    context_label(
+                        comparison_context.same_venue
+                    ),
+                    border=True,
+                )
+
+                comparison_columns[1].metric(
+                    "Clearing",
+                    context_label(
+                        comparison_context.same_clearing_type
+                    ),
+                    border=True,
+                )
+
+                comparison_columns[2].metric(
+                    "Market segment",
+                    context_label(
+                        comparison_context.same_counterparty_segment
+                    ),
+                    border=True,
+                )
+
+                comparison_columns[3].metric(
+                    "GC basket",
+                    (
+                        "Identified"
+                        if comparison_context.gc_basket_identified
+                        else "Unspecified"
+                    ),
+                    border=True,
+                )
+
+                if comparison_context.is_fully_context_matched:
+                    st.success(
+                        "The quote pair is fully matched on the optional "
+                        "market-context dimensions captured by RepoLens."
+                    )
+                else:
+                    st.warning(
+                        "Specialness is arithmetically valid, but the quote "
+                        "pair is not fully context-matched."
+                    )
+
+                    for warning in comparison_context.warnings:
+                        st.caption(
+                            f"• {warning}"
+                        )
+
+                st.caption(
+                    "Currency and repo term remain hard matching requirements. "
+                    "Venue, clearing type, market segment and GC basket identity "
+                    "are comparison-quality dimensions."
+                )
+
+            st.markdown(
+                '<div class="section-label">Historical specialness context</div>',
+                unsafe_allow_html=True,
+            )
+
+            try:
+                stored_specialness_records = (
+                    load_repo_specialness_records()
+                )
+
+                matched_history = (
+                    history_observations_for_market(
+                        records=(
+                            stored_specialness_records
+                        ),
+                        isin=(
+                            structured_specialness.isin
+                        ),
+                        currency=(
+                            structured_specialness.currency
+                        ),
+                        repo_days=(
+                            structured_specialness.repo_days
+                        ),
+                        before_timestamp=(
+                            structured_specialness
+                            .specific_quote_timestamp
+                        ),
+                    )
+                )
+
+                historical_analysis = None
+
+                if matched_history:
+                    historical_analysis = (
+                        analyse_specialness_history(
+                            historical_observations=(
+                                matched_history
+                            ),
+                            current_observation=(
+                                observation_from_result(
+                                    structured_specialness
+                                )
+                            ),
+                        )
+                    )
+
+            except (
+                RepoSpecialnessStoreError,
+                RepoSpecialnessHistoryValidationError,
+                OSError,
+            ) as error:
+                st.warning(
+                    "Historical specialness context is unavailable because "
+                    "RepoLens could not read or validate the saved observation history."
+                )
+                st.code(
+                    str(
+                        error
+                    )
+                )
+
+            else:
+                if historical_analysis is None:
+                    st.info(
+                        "No earlier saved observations match this exact "
+                        "ISIN, currency and repo term yet. Save clean market "
+                        "observations over time to build instrument-specific context."
+                    )
+
+                else:
+                    history_columns = st.columns(
+                        5
+                    )
+
+                    history_columns[0].metric(
+                        "Historical median",
+                        format_optional_bp(
+                            historical_analysis
+                            .historical_median_bp
+                        ),
+                        delta=(
+                            f"{historical_analysis.historical_observation_count} "
+                            "matched observations"
+                        ),
+                        delta_color="off",
+                        border=True,
+                    )
+
+                    history_columns[1].metric(
+                        "Current percentile",
+                        (
+                            f"{historical_analysis.historical_percentile:.1f}%"
+                        ),
+                        delta=(
+                            "Empirical rank vs saved history"
+                        ),
+                        delta_color="off",
+                        border=True,
+                    )
+
+                    history_columns[2].metric(
+                        "Z-score",
+                        format_optional_z_score(
+                            historical_analysis.z_score
+                        ),
+                        delta=(
+                            "Vs historical mean / volatility"
+                            if historical_analysis.z_score
+                            is not None
+                            else "Historical volatility is zero"
+                        ),
+                        delta_color="off",
+                        border=True,
+                    )
+
+                    history_columns[3].metric(
+                        "Change vs previous",
+                        format_optional_bp(
+                            historical_analysis
+                            .change_vs_previous_bp
+                        ),
+                        delta=(
+                            historical_analysis
+                            .previous_timestamp
+                            .strftime("%Y-%m-%d %H:%M UTC")
+                            if historical_analysis
+                            .previous_timestamp
+                            is not None
+                            else "No previous observation"
+                        ),
+                        delta_color="off",
+                        border=True,
+                    )
+
+                    history_columns[4].metric(
+                        "Positive specialness share",
+                        (
+                            f"{historical_analysis.positive_specialness_share_percent:.1f}%"
+                        ),
+                        delta="Historical observations > 0 bp",
+                        delta_color="off",
+                        border=True,
+                    )
+
+                    st.caption(
+                        "Historical distribution · "
+                        f"mean "
+                        f"{historical_analysis.historical_mean_bp:+.2f} bp · "
+                        f"range "
+                        f"{historical_analysis.historical_min_bp:+.2f} to "
+                        f"{historical_analysis.historical_max_bp:+.2f} bp · "
+                        f"population σ "
+                        f"{historical_analysis.historical_std_bp:.2f} bp. "
+                        "RepoLens does not apply a universal threshold to label "
+                        "an issue special; these metrics provide matched historical context."
+                    )
 
             with st.container(
                 border=True
@@ -1758,7 +2359,16 @@ def main() -> None:
 
             Historical repo observations are persisted only when the user
             explicitly selects **Save market observation**. Streamlit reruns
-            do not automatically write market history.
+            do not automatically write market history. Quote timestamps can
+            use the current UTC input-capture time or explicit UTC observation
+            times for the specific and GC legs. Historical context is matched
+            strictly by ISIN, currency and repo term; the current observation
+            is excluded from its own historical distribution.
+
+            Venue, clearing type, market segment and GC basket identity are
+            stored and surfaced as comparison-quality metadata. RepoLens flags
+            context mismatches instead of treating different market settings
+            as automatically equivalent.
 
             Schedule-derived accrued interest, remaining-maturity buckets,
             cash, repo-interest, specialness, pull-to-par, financed carry,

@@ -8,6 +8,8 @@ from typing import Final, Iterable
 
 from src.repo_market_state import (
     GCReference,
+    RepoClearingType,
+    RepoCounterpartySegment,
     RepoQuoteSourceType,
     RepoSpecialnessResult,
     SpecificRepoQuote,
@@ -31,10 +33,14 @@ REPO_SPECIALNESS_HISTORY_COLUMNS: Final[tuple[str, ...]] = (
     "specific_source_name",
     "specific_source_type",
     "specific_venue",
+    "specific_clearing_type",
+    "specific_counterparty_segment",
     "gc_source_name",
     "gc_source_type",
     "gc_basket_name",
     "gc_venue",
+    "gc_clearing_type",
+    "gc_counterparty_segment",
     "quote_time_difference_seconds",
     "purchase_price_eur",
     "day_count_basis",
@@ -76,10 +82,14 @@ class RepoSpecialnessStoredRecord:
     specific_source_name: str
     specific_source_type: RepoQuoteSourceType
     specific_venue: str | None
+    specific_clearing_type: RepoClearingType
+    specific_counterparty_segment: RepoCounterpartySegment
     gc_source_name: str
     gc_source_type: RepoQuoteSourceType
     gc_basket_name: str | None
     gc_venue: str | None
+    gc_clearing_type: RepoClearingType
+    gc_counterparty_segment: RepoCounterpartySegment
     quote_time_difference_seconds: float
     purchase_price_eur: float | None
     day_count_basis: int | None
@@ -229,10 +239,22 @@ def stored_record_from_market_state(
         specific_source_name=result.specific_source_name,
         specific_source_type=specific_quote.source_type,
         specific_venue=specific_quote.venue,
+        specific_clearing_type=(
+            specific_quote.clearing_type
+        ),
+        specific_counterparty_segment=(
+            specific_quote.counterparty_segment
+        ),
         gc_source_name=result.gc_source_name,
         gc_source_type=gc_reference.source_type,
         gc_basket_name=gc_reference.basket_name,
         gc_venue=gc_reference.venue,
+        gc_clearing_type=(
+            gc_reference.clearing_type
+        ),
+        gc_counterparty_segment=(
+            gc_reference.counterparty_segment
+        ),
         quote_time_difference_seconds=result.quote_time_difference_seconds,
         purchase_price_eur=result.purchase_price_eur,
         day_count_basis=result.day_count_basis,
@@ -281,10 +303,22 @@ def _record_to_row(
         "specific_source_name": record.specific_source_name,
         "specific_source_type": record.specific_source_type.value,
         "specific_venue": record.specific_venue or "",
+        "specific_clearing_type": (
+            record.specific_clearing_type.value
+        ),
+        "specific_counterparty_segment": (
+            record.specific_counterparty_segment.value
+        ),
         "gc_source_name": record.gc_source_name,
         "gc_source_type": record.gc_source_type.value,
         "gc_basket_name": record.gc_basket_name or "",
         "gc_venue": record.gc_venue or "",
+        "gc_clearing_type": (
+            record.gc_clearing_type.value
+        ),
+        "gc_counterparty_segment": (
+            record.gc_counterparty_segment.value
+        ),
         "quote_time_difference_seconds": repr(
             float(record.quote_time_difference_seconds)
         ),
@@ -361,6 +395,12 @@ def _row_to_record(
                 row["specific_venue"].strip()
                 or None
             ),
+            specific_clearing_type=RepoClearingType(
+                row["specific_clearing_type"]
+            ),
+            specific_counterparty_segment=RepoCounterpartySegment(
+                row["specific_counterparty_segment"]
+            ),
             gc_source_name=row["gc_source_name"],
             gc_source_type=RepoQuoteSourceType(
                 row["gc_source_type"]
@@ -372,6 +412,12 @@ def _row_to_record(
             gc_venue=(
                 row["gc_venue"].strip()
                 or None
+            ),
+            gc_clearing_type=RepoClearingType(
+                row["gc_clearing_type"]
+            ),
+            gc_counterparty_segment=RepoCounterpartySegment(
+                row["gc_counterparty_segment"]
             ),
             quote_time_difference_seconds=float(
                 row["quote_time_difference_seconds"]

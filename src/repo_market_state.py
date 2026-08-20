@@ -33,6 +33,62 @@ class RepoQuoteSourceType(StrEnum):
     OFFICIAL_REFERENCE = "OFFICIAL_REFERENCE"
 
 
+class RepoClearingType(StrEnum):
+    """
+    Describe how a repo observation is cleared or settled operationally.
+
+    UNSPECIFIED is explicit: it means RepoLens does not know the clearing
+    context and therefore should not imply comparability on that dimension.
+    """
+
+    UNSPECIFIED = "UNSPECIFIED"
+    BILATERAL = "BILATERAL"
+    CCP_CLEARED = "CCP_CLEARED"
+    TRI_PARTY = "TRI_PARTY"
+
+
+class RepoCounterpartySegment(StrEnum):
+    """
+    Describe broad counterparty context without storing a named counterparty.
+    """
+
+    UNSPECIFIED = "UNSPECIFIED"
+    DEALER_TO_DEALER = "DEALER_TO_DEALER"
+    DEALER_TO_CLIENT = "DEALER_TO_CLIENT"
+
+
+@dataclass(frozen=True)
+class RepoComparisonContext:
+    """
+    Assess whether two repo observations share important market context.
+
+    Currency and repo term are hard matching requirements elsewhere.
+    Venue, clearing and counterparty segment are softer dimensions because
+    legitimate desk analysis may compare observations from different venues
+    or market segments. RepoLens exposes those differences rather than
+    silently treating the quotes as identical market conditions.
+    """
+
+    same_venue: bool | None
+    same_clearing_type: bool | None
+    same_counterparty_segment: bool | None
+    gc_basket_identified: bool
+    warnings: tuple[str, ...]
+
+    @property
+    def is_fully_context_matched(self) -> bool:
+        """
+        Return True only when every optional context dimension is known/matched.
+        """
+        return (
+            self.same_venue is True
+            and self.same_clearing_type is True
+            and self.same_counterparty_segment is True
+            and self.gc_basket_identified
+            and not self.warnings
+        )
+
+
 @dataclass(frozen=True)
 class GCReference:
     """
@@ -54,6 +110,10 @@ class GCReference:
     source_type: RepoQuoteSourceType
     basket_name: str | None = None
     venue: str | None = None
+    clearing_type: RepoClearingType = RepoClearingType.UNSPECIFIED
+    counterparty_segment: RepoCounterpartySegment = (
+        RepoCounterpartySegment.UNSPECIFIED
+    )
 
     def __post_init__(self) -> None:
         currency = self.currency.strip().upper()
@@ -113,6 +173,10 @@ class SpecificRepoQuote:
     source_name: str
     source_type: RepoQuoteSourceType
     venue: str | None = None
+    clearing_type: RepoClearingType = RepoClearingType.UNSPECIFIED
+    counterparty_segment: RepoCounterpartySegment = (
+        RepoCounterpartySegment.UNSPECIFIED
+    )
 
     def __post_init__(self) -> None:
         isin = self.isin.strip().upper()
@@ -184,6 +248,124 @@ class RepoSpecialnessResult:
     purchase_price_eur: float | None
     day_count_basis: int | None
     financing_benefit_vs_gc_eur: float | None
+    comparison_context: RepoComparisonContext | None = None
+
+
+def _optional_context_match(
+    left: object,
+    right: object,
+    *,
+    unspecified_value: object,
+) -> bool | None:
+    """
+    Compare one optional market-context dimension.
+
+    None means at least one side is explicitly unspecified.
+    """
+    if (
+        left == unspecified_value
+        or right == unspecified_value
+    ):
+        return None
+
+    return left == right
+
+
+def _optional_text_match(
+    left: str | None,
+    right: str | None,
+) -> bool | None:
+    """
+    Compare optional free-text context such as venue.
+    """
+    if left is None or right is None:
+        return None
+
+    return (
+        left.strip().casefold()
+        == right.strip().casefold()
+    )
+
+
+def assess_repo_comparison_context(
+    *,
+    specific_quote: SpecificRepoQuote,
+    gc_reference: GCReference,
+) -> RepoComparisonContext:
+    """
+    Assess softer market-microstructure differences between matched quotes.
+
+    This function does not reject different venues or clearing arrangements.
+    It makes those differences explicit so a trader can judge whether the
+    observed GC-minus-specific spread is economically comparable.
+    """
+    same_venue = _optional_text_match(
+        specific_quote.venue,
+        gc_reference.venue,
+    )
+
+    same_clearing_type = _optional_context_match(
+        specific_quote.clearing_type,
+        gc_reference.clearing_type,
+        unspecified_value=RepoClearingType.UNSPECIFIED,
+    )
+
+    same_counterparty_segment = _optional_context_match(
+        specific_quote.counterparty_segment,
+        gc_reference.counterparty_segment,
+        unspecified_value=RepoCounterpartySegment.UNSPECIFIED,
+    )
+
+    gc_basket_identified = (
+        gc_reference.basket_name is not None
+        and bool(
+            gc_reference.basket_name.strip()
+        )
+    )
+
+    warnings: list[str] = []
+
+    if same_venue is False:
+        warnings.append(
+            "Specific repo and GC reference come from different venues."
+        )
+    elif same_venue is None:
+        warnings.append(
+            "Venue is not identified for both observations."
+        )
+
+    if same_clearing_type is False:
+        warnings.append(
+            "Specific repo and GC reference use different clearing types."
+        )
+    elif same_clearing_type is None:
+        warnings.append(
+            "Clearing type is not identified for both observations."
+        )
+
+    if same_counterparty_segment is False:
+        warnings.append(
+            "Specific repo and GC reference use different counterparty segments."
+        )
+    elif same_counterparty_segment is None:
+        warnings.append(
+            "Counterparty segment is not identified for both observations."
+        )
+
+    if not gc_basket_identified:
+        warnings.append(
+            "GC basket or reference identity is not specified."
+        )
+
+    return RepoComparisonContext(
+        same_venue=same_venue,
+        same_clearing_type=same_clearing_type,
+        same_counterparty_segment=same_counterparty_segment,
+        gc_basket_identified=gc_basket_identified,
+        warnings=tuple(
+            warnings
+        ),
+    )
 
 
 def calculate_specialness_bp(
@@ -343,6 +525,13 @@ def compare_specific_to_gc(
         ).total_seconds()
     )
 
+    comparison_context = (
+        assess_repo_comparison_context(
+            specific_quote=specific_quote,
+            gc_reference=gc_reference,
+        )
+    )
+
     return RepoSpecialnessResult(
         isin=specific_quote.isin.strip().upper(),
         currency=specific_currency,
@@ -358,4 +547,5 @@ def compare_specific_to_gc(
         purchase_price_eur=purchase_price_eur,
         day_count_basis=day_count_basis,
         financing_benefit_vs_gc_eur=financing_benefit_vs_gc_eur,
+        comparison_context=comparison_context,
     )

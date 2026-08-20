@@ -539,6 +539,11 @@ def main() -> None:
                 icon=":material/calculate:",
             ),
             st.Page(
+                "app_pages/repo_specials_screener_page.py",
+                title="Specials Screener",
+                icon=":material/filter_alt:",
+            ),
+            st.Page(
                 "app_pages/sovereign_relative_value_page.py",
                 title="Relative Value Monitor",
                 icon=":material/compare_arrows:",

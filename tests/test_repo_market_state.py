@@ -4,9 +4,12 @@ import pytest
 
 from src.repo_market_state import (
     GCReference,
+    RepoClearingType,
+    RepoCounterpartySegment,
     RepoMarketStateValidationError,
     RepoQuoteSourceType,
     SpecificRepoQuote,
+    assess_repo_comparison_context,
     calculate_financing_benefit_vs_gc_eur,
     calculate_specialness_bp,
     compare_specific_to_gc,
@@ -330,3 +333,152 @@ def test_cash_economics_inputs_must_be_supplied_together() -> None:
             gc_reference=gc,
             purchase_price_eur=10_000_000.0,
         )
+
+
+
+def test_context_assessment_identifies_fully_matched_market_context() -> None:
+    timestamp = datetime(
+        2026,
+        8,
+        20,
+        9,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+    gc = GCReference(
+        currency="EUR",
+        repo_days=7,
+        rate_percent=2.00,
+        quote_timestamp=timestamp,
+        source_name="GC venue input",
+        source_type=RepoQuoteSourceType.MARKET_FEED,
+        basket_name="EUR sovereign GC",
+        venue="Venue A",
+        clearing_type=RepoClearingType.CCP_CLEARED,
+        counterparty_segment=(
+            RepoCounterpartySegment.DEALER_TO_DEALER
+        ),
+    )
+
+    specific = SpecificRepoQuote(
+        isin="DE000BU22148",
+        currency="EUR",
+        repo_days=7,
+        rate_percent=1.75,
+        quote_timestamp=timestamp,
+        source_name="Specific venue input",
+        source_type=RepoQuoteSourceType.MARKET_FEED,
+        venue="Venue A",
+        clearing_type=RepoClearingType.CCP_CLEARED,
+        counterparty_segment=(
+            RepoCounterpartySegment.DEALER_TO_DEALER
+        ),
+    )
+
+    context = assess_repo_comparison_context(
+        specific_quote=specific,
+        gc_reference=gc,
+    )
+
+    assert context.same_venue is True
+    assert context.same_clearing_type is True
+    assert context.same_counterparty_segment is True
+    assert context.gc_basket_identified is True
+    assert context.warnings == ()
+    assert context.is_fully_context_matched
+
+
+def test_context_assessment_surfaces_clearing_and_venue_mismatch() -> None:
+    timestamp = datetime(
+        2026,
+        8,
+        20,
+        9,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+    gc = GCReference(
+        currency="EUR",
+        repo_days=1,
+        rate_percent=2.00,
+        quote_timestamp=timestamp,
+        source_name="GC",
+        source_type=RepoQuoteSourceType.DESK_INPUT,
+        basket_name="EUR GC",
+        venue="CCP venue",
+        clearing_type=RepoClearingType.CCP_CLEARED,
+        counterparty_segment=(
+            RepoCounterpartySegment.DEALER_TO_DEALER
+        ),
+    )
+
+    specific = SpecificRepoQuote(
+        isin="FR0014018YR0",
+        currency="EUR",
+        repo_days=1,
+        rate_percent=1.80,
+        quote_timestamp=timestamp,
+        source_name="Broker",
+        source_type=RepoQuoteSourceType.BROKER_INPUT,
+        venue="Bilateral broker",
+        clearing_type=RepoClearingType.BILATERAL,
+        counterparty_segment=(
+            RepoCounterpartySegment.DEALER_TO_CLIENT
+        ),
+    )
+
+    result = compare_specific_to_gc(
+        specific_quote=specific,
+        gc_reference=gc,
+    )
+
+    assert result.comparison_context is not None
+    assert result.comparison_context.same_venue is False
+    assert result.comparison_context.same_clearing_type is False
+    assert result.comparison_context.same_counterparty_segment is False
+    assert not result.comparison_context.is_fully_context_matched
+    assert len(result.comparison_context.warnings) == 3
+
+
+def test_unspecified_context_is_reported_as_unknown_not_false_match() -> None:
+    timestamp = datetime(
+        2026,
+        8,
+        20,
+        9,
+        0,
+        tzinfo=timezone.utc,
+    )
+
+    gc = GCReference(
+        currency="EUR",
+        repo_days=1,
+        rate_percent=2.00,
+        quote_timestamp=timestamp,
+        source_name="Desk GC",
+        source_type=RepoQuoteSourceType.DESK_INPUT,
+    )
+
+    specific = SpecificRepoQuote(
+        isin="DE000BU22148",
+        currency="EUR",
+        repo_days=1,
+        rate_percent=1.90,
+        quote_timestamp=timestamp,
+        source_name="Broker",
+        source_type=RepoQuoteSourceType.BROKER_INPUT,
+    )
+
+    context = assess_repo_comparison_context(
+        specific_quote=specific,
+        gc_reference=gc,
+    )
+
+    assert context.same_venue is None
+    assert context.same_clearing_type is None
+    assert context.same_counterparty_segment is None
+    assert context.gc_basket_identified is False
+    assert len(context.warnings) == 4
+    assert not context.is_fully_context_matched
