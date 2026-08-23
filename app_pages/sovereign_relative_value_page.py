@@ -7,6 +7,15 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from src.bond_analytics import (
+    BondValidationError,
+    dirty_price_from_yield,
+)
+from src.repo_adjusted_relative_value import (
+    RepoAdjustedRelativeValueValidationError,
+    RepoFundingLegInput,
+    analyse_repo_adjusted_relative_value,
+)
 from src.sovereign_instruments import (
     SOVEREIGN_INSTRUMENTS,
     SovereignCountry,
@@ -808,6 +817,193 @@ def main() -> None:
                     "Official German daily benchmark reference data."
                 )
 
+        st.divider()
+
+        repo_overlay_enabled = st.checkbox(
+            "Overlay repo funding economics",
+            value=True,
+            key="rv_repo_overlay_enabled",
+            help=(
+                "Add explicit desk / broker specific-repo and matched GC "
+                "inputs to the DV01-neutral cash-bond trade."
+            ),
+        )
+
+        anchor_specific_repo_rate_percent = 0.0
+        anchor_gc_repo_rate_percent = 0.0
+        anchor_haircut_percent = 0.0
+        hedge_specific_repo_rate_percent = 0.0
+        hedge_gc_repo_rate_percent = 0.0
+        hedge_haircut_percent = 0.0
+        repo_days = 30
+        repo_day_count_basis = 360
+
+        if repo_overlay_enabled:
+            st.markdown(
+                "**Repo funding overlay inputs**"
+            )
+
+            repo_setup_one, repo_setup_two = st.columns(
+                2
+            )
+
+            with repo_setup_one:
+                repo_days = st.number_input(
+                    "Matched repo term (days)",
+                    min_value=1,
+                    max_value=366,
+                    value=30,
+                    step=1,
+                    key="rv_repo_days",
+                    help=(
+                        "The same contractual repo horizon is applied to "
+                        "both legs. RepoLens does not compare mismatched terms."
+                    ),
+                )
+
+            with repo_setup_two:
+                repo_day_count_basis = st.selectbox(
+                    "Repo day-count basis",
+                    options=[
+                        360,
+                        365,
+                    ],
+                    index=0,
+                    format_func=lambda value: (
+                        f"Actual/{value}"
+                    ),
+                    key="rv_repo_day_count_basis",
+                )
+
+            repo_anchor_column, repo_hedge_column = st.columns(
+                2
+            )
+
+            with repo_anchor_column:
+                st.markdown(
+                    f"**Anchor funding · {anchor_instrument.isin}**"
+                )
+
+                anchor_repo_rate_columns = st.columns(
+                    2
+                )
+
+                with anchor_repo_rate_columns[0]:
+                    anchor_specific_repo_rate_percent = (
+                        st.number_input(
+                            "Anchor specific repo (%)",
+                            min_value=-20.0,
+                            max_value=30.0,
+                            value=2.00,
+                            step=0.01,
+                            format="%.4f",
+                            key=(
+                                "rv_anchor_specific_repo_"
+                                f"{anchor_instrument.isin}"
+                            ),
+                            help=(
+                                "Explicit desk / broker specific-repo input."
+                            ),
+                        )
+                    )
+
+                with anchor_repo_rate_columns[1]:
+                    anchor_gc_repo_rate_percent = (
+                        st.number_input(
+                            "Anchor matched GC (%)",
+                            min_value=-20.0,
+                            max_value=30.0,
+                            value=2.25,
+                            step=0.01,
+                            format="%.4f",
+                            key=(
+                                "rv_anchor_gc_repo_"
+                                f"{anchor_instrument.isin}"
+                            ),
+                            help=(
+                                "Matched secured GC reference. This is not €STR."
+                            ),
+                        )
+                    )
+
+                anchor_haircut_percent = st.number_input(
+                    "Anchor haircut (%)",
+                    min_value=-20.0,
+                    max_value=50.0,
+                    value=0.00,
+                    step=0.10,
+                    format="%.3f",
+                    key=(
+                        "rv_anchor_haircut_"
+                        f"{anchor_instrument.isin}"
+                    ),
+                )
+
+            with repo_hedge_column:
+                st.markdown(
+                    f"**Hedge funding · {hedge_instrument.isin}**"
+                )
+
+                hedge_repo_rate_columns = st.columns(
+                    2
+                )
+
+                with hedge_repo_rate_columns[0]:
+                    hedge_specific_repo_rate_percent = (
+                        st.number_input(
+                            "Hedge specific repo (%)",
+                            min_value=-20.0,
+                            max_value=30.0,
+                            value=2.00,
+                            step=0.01,
+                            format="%.4f",
+                            key=(
+                                "rv_hedge_specific_repo_"
+                                f"{hedge_instrument.isin}"
+                            ),
+                            help=(
+                                "Explicit desk / broker specific-repo input."
+                            ),
+                        )
+                    )
+
+                with hedge_repo_rate_columns[1]:
+                    hedge_gc_repo_rate_percent = (
+                        st.number_input(
+                            "Hedge matched GC (%)",
+                            min_value=-20.0,
+                            max_value=30.0,
+                            value=2.25,
+                            step=0.01,
+                            format="%.4f",
+                            key=(
+                                "rv_hedge_gc_repo_"
+                                f"{hedge_instrument.isin}"
+                            ),
+                            help=(
+                                "Matched secured GC reference. This is not €STR."
+                            ),
+                        )
+                    )
+
+                hedge_haircut_percent = st.number_input(
+                    "Hedge haircut (%)",
+                    min_value=-20.0,
+                    max_value=50.0,
+                    value=0.00,
+                    step=0.10,
+                    format="%.3f",
+                    key=(
+                        "rv_hedge_haircut_"
+                        f"{hedge_instrument.isin}"
+                    ),
+                )
+
+            st.caption(
+                "Repo inputs are explicit desk / broker assumptions. "
+                "RepoLens does not manufacture executable specific-repo or GC quotes."
+            )
+
     if anchor_instrument.isin == hedge_instrument.isin:
         st.warning(
             "Select two different instruments to construct a trade."
@@ -873,9 +1069,100 @@ def main() -> None:
         position_frame = position_to_frame(
             position
         )
-    except RelativeValueValidationError as error:
+
+        repo_adjusted_analysis = None
+
+        if repo_overlay_enabled:
+            anchor_dirty_price = dirty_price_from_yield(
+                bond=(
+                    anchor_instrument
+                    .to_fixed_rate_bond()
+                ),
+                settlement_date=settlement_date,
+                yield_to_maturity=(
+                    float(
+                        anchor_yield_percent
+                    )
+                    / 100.0
+                ),
+            )
+
+            hedge_dirty_price = dirty_price_from_yield(
+                bond=(
+                    hedge_instrument
+                    .to_fixed_rate_bond()
+                ),
+                settlement_date=settlement_date,
+                yield_to_maturity=(
+                    float(
+                        hedge_yield_percent
+                    )
+                    / 100.0
+                ),
+            )
+
+            repo_adjusted_analysis = (
+                analyse_repo_adjusted_relative_value(
+                    anchor=RepoFundingLegInput(
+                        isin=anchor_instrument.isin,
+                        direction=position.anchor_direction,
+                        face_value_eur=(
+                            position.anchor_notional_eur
+                        ),
+                        dirty_price_per_100=(
+                            anchor_dirty_price
+                        ),
+                        haircut_percent=float(
+                            anchor_haircut_percent
+                        ),
+                        specific_repo_rate_percent=float(
+                            anchor_specific_repo_rate_percent
+                        ),
+                        gc_repo_rate_percent=float(
+                            anchor_gc_repo_rate_percent
+                        ),
+                        repo_days=int(
+                            repo_days
+                        ),
+                        day_count_basis=int(
+                            repo_day_count_basis
+                        ),
+                    ),
+                    hedge=RepoFundingLegInput(
+                        isin=hedge_instrument.isin,
+                        direction=position.hedge_direction,
+                        face_value_eur=(
+                            position.hedge_notional_eur
+                        ),
+                        dirty_price_per_100=(
+                            hedge_dirty_price
+                        ),
+                        haircut_percent=float(
+                            hedge_haircut_percent
+                        ),
+                        specific_repo_rate_percent=float(
+                            hedge_specific_repo_rate_percent
+                        ),
+                        gc_repo_rate_percent=float(
+                            hedge_gc_repo_rate_percent
+                        ),
+                        repo_days=int(
+                            repo_days
+                        ),
+                        day_count_basis=int(
+                            repo_day_count_basis
+                        ),
+                    ),
+                )
+            )
+    except (
+        RelativeValueValidationError,
+        RepoAdjustedRelativeValueValidationError,
+        BondValidationError,
+    ) as error:
         st.error(
-            "RepoLens could not construct the relative-value position."
+            "RepoLens could not construct the relative-value position "
+            "and funding overlay."
         )
 
         st.code(
@@ -966,6 +1253,249 @@ def main() -> None:
         delta_color="off",
         border=True,
     )
+
+    if repo_adjusted_analysis is not None:
+        st.markdown(
+            '<div class="section-label">Repo funding overlay</div>',
+            unsafe_allow_html=True,
+        )
+
+        funding_columns = st.columns(
+            5
+        )
+
+        funding_columns[0].metric(
+            "Anchor specialness",
+            (
+                f"{repo_adjusted_analysis.anchor.specialness_bp:+.2f} bp"
+            ),
+            delta=(
+                f"{repo_adjusted_analysis.anchor.specific_repo_rate_percent:.4f}% "
+                "specific"
+            ),
+            delta_color="off",
+            border=True,
+        )
+
+        funding_columns[1].metric(
+            "Hedge specialness",
+            (
+                f"{repo_adjusted_analysis.hedge.specialness_bp:+.2f} bp"
+            ),
+            delta=(
+                f"{repo_adjusted_analysis.hedge.specific_repo_rate_percent:.4f}% "
+                "specific"
+            ),
+            delta_color="off",
+            border=True,
+        )
+
+        funding_columns[2].metric(
+            "Specialness differential",
+            (
+                f"{repo_adjusted_analysis.anchor_minus_hedge_specialness_bp:+.2f} bp"
+            ),
+            delta="Anchor minus hedge",
+            delta_color="off",
+            border=True,
+        )
+
+        funding_columns[3].metric(
+            "Net funding overlay vs GC",
+            format_euro(
+                repo_adjusted_analysis
+                .net_signed_financing_impact_vs_gc_eur,
+                decimals=2,
+            ),
+            delta=(
+                f"{repo_adjusted_analysis.repo_days} day matched term"
+            ),
+            delta_color="off",
+            border=True,
+        )
+
+        funding_columns[4].metric(
+            "Net overlay / €1m anchor",
+            format_euro(
+                repo_adjusted_analysis
+                .net_signed_financing_impact_per_eur_1m_anchor_face,
+                decimals=2,
+            ),
+            delta="Normalised to anchor face",
+            delta_color="off",
+            border=True,
+        )
+
+        funding_leg_frame = pd.DataFrame(
+            [
+                {
+                    "Leg": "Anchor",
+                    "ISIN": (
+                        repo_adjusted_analysis
+                        .anchor
+                        .isin
+                    ),
+                    "Direction": (
+                        repo_adjusted_analysis
+                        .anchor
+                        .direction
+                        .value
+                    ),
+                    "Face value (€)": (
+                        repo_adjusted_analysis
+                        .anchor
+                        .face_value_eur
+                    ),
+                    "Dirty price": (
+                        repo_adjusted_analysis
+                        .anchor
+                        .dirty_price_per_100
+                    ),
+                    "Specific repo (%)": (
+                        repo_adjusted_analysis
+                        .anchor
+                        .specific_repo_rate_percent
+                    ),
+                    "GC (%)": (
+                        repo_adjusted_analysis
+                        .anchor
+                        .gc_repo_rate_percent
+                    ),
+                    "Specialness (bp)": (
+                        repo_adjusted_analysis
+                        .anchor
+                        .specialness_bp
+                    ),
+                    "Signed funding impact (€)": (
+                        repo_adjusted_analysis
+                        .anchor
+                        .signed_financing_impact_vs_gc_eur
+                    ),
+                },
+                {
+                    "Leg": "Hedge",
+                    "ISIN": (
+                        repo_adjusted_analysis
+                        .hedge
+                        .isin
+                    ),
+                    "Direction": (
+                        repo_adjusted_analysis
+                        .hedge
+                        .direction
+                        .value
+                    ),
+                    "Face value (€)": (
+                        repo_adjusted_analysis
+                        .hedge
+                        .face_value_eur
+                    ),
+                    "Dirty price": (
+                        repo_adjusted_analysis
+                        .hedge
+                        .dirty_price_per_100
+                    ),
+                    "Specific repo (%)": (
+                        repo_adjusted_analysis
+                        .hedge
+                        .specific_repo_rate_percent
+                    ),
+                    "GC (%)": (
+                        repo_adjusted_analysis
+                        .hedge
+                        .gc_repo_rate_percent
+                    ),
+                    "Specialness (bp)": (
+                        repo_adjusted_analysis
+                        .hedge
+                        .specialness_bp
+                    ),
+                    "Signed funding impact (€)": (
+                        repo_adjusted_analysis
+                        .hedge
+                        .signed_financing_impact_vs_gc_eur
+                    ),
+                },
+            ]
+        )
+
+        st.dataframe(
+            funding_leg_frame,
+            hide_index=True,
+            width="stretch",
+            column_config={
+                "Face value (€)": (
+                    st.column_config.NumberColumn(
+                        "Face value",
+                        format="€%,.0f",
+                    )
+                ),
+                "Dirty price": (
+                    st.column_config.NumberColumn(
+                        "Dirty price",
+                        format="%.4f",
+                    )
+                ),
+                "Specific repo (%)": (
+                    st.column_config.NumberColumn(
+                        "Specific repo",
+                        format="%.4f%%",
+                    )
+                ),
+                "GC (%)": (
+                    st.column_config.NumberColumn(
+                        "GC",
+                        format="%.4f%%",
+                    )
+                ),
+                "Specialness (bp)": (
+                    st.column_config.NumberColumn(
+                        "Specialness",
+                        format="%+.2f bp",
+                    )
+                ),
+                "Signed funding impact (€)": (
+                    st.column_config.NumberColumn(
+                        "Signed funding impact",
+                        format="€%,.2f",
+                    )
+                ),
+            },
+        )
+
+        if (
+            repo_adjusted_analysis
+            .net_signed_financing_impact_vs_gc_eur
+            > 0.0
+        ):
+            st.success(
+                "On the entered repo assumptions, specific-collateral funding "
+                "improves this DV01-neutral trade versus funding both legs at "
+                "their matched GC references."
+            )
+        elif (
+            repo_adjusted_analysis
+            .net_signed_financing_impact_vs_gc_eur
+            < 0.0
+        ):
+            st.warning(
+                "On the entered repo assumptions, specific-collateral funding "
+                "detracts from this DV01-neutral trade versus funding both legs "
+                "at their matched GC references."
+            )
+        else:
+            st.info(
+                "On the entered repo assumptions, the two signed funding "
+                "effects offset versus matched GC."
+            )
+
+        st.caption(
+            "For a long collateral leg, cheaper specific funding versus GC "
+            "adds value. For a short collateral leg, collateral scarcity is "
+            "applied with the opposite sign because obtaining the bond is an "
+            "economic cost to the short. This is a funding overlay, not an "
+            "executable trade recommendation."
+        )
 
     st.markdown(
         '<div class="section-label">Rate-risk profile</div>',
@@ -1105,6 +1635,12 @@ def main() -> None:
             For a long-anchor, short-hedge position, spread narrowing
             normally produces a gain and spread widening normally produces
             a loss.
+
+            When the repo overlay is enabled, RepoLens keeps cash-bond RV and
+            financing RV separate. A positive net funding overlay means the
+            entered specific-repo economics improve the trade versus matched
+            GC funding over the selected repo horizon; a negative value means
+            they detract from it.
             """
         )
 
@@ -1121,8 +1657,13 @@ def main() -> None:
             Italian yields are explicit user-supplied desk inputs.
             RepoLens does not manufacture or interpolate BTP market prices.
 
-            Hedge ratios, DV01, spread measures and scenario P&L are
-            RepoLens-derived research analytics.
+            Specific-repo rates, GC references and haircuts are explicit
+            desk / broker inputs and are not executable quotes supplied by
+            RepoLens.
+
+            Hedge ratios, DV01, spread measures, scenario P&L, specialness and
+            the signed specific-versus-GC funding overlay are RepoLens-derived
+            research analytics.
             """
         )
 
