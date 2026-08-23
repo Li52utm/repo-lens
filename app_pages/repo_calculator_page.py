@@ -19,6 +19,10 @@ from src.repo_analytics import (
     required_collateral_market_value,
     required_face_value,
 )
+from src.repo_adjusted_carry import (
+    RepoAdjustedCarryValidationError,
+    analyse_repo_adjusted_bond_carry,
+)
 from src.repo_market_state import (
     GCReference,
     RepoClearingType,
@@ -1566,6 +1570,286 @@ def main() -> None:
                 "opportunity cost are not included."
             )
 
+    if (
+        selected_coupon_instrument is not None
+        and gc_repo_rate_percent is not None
+    ):
+        st.markdown(
+            '<div class="section-label">Repo-adjusted carry vs GC</div>',
+            unsafe_allow_html=True,
+        )
+
+        try:
+            repo_adjusted_carry = (
+                analyse_repo_adjusted_bond_carry(
+                    bond=(
+                        selected_coupon_instrument
+                        .to_fixed_rate_bond()
+                    ),
+                    trade=trade,
+                    gc_repo_rate_percent=float(
+                        gc_repo_rate_percent
+                    ),
+                )
+            )
+
+        except RepoAdjustedCarryValidationError as error:
+            st.warning(
+                "RepoLens could not calculate the specific-versus-GC "
+                "carry comparison for the selected inputs."
+            )
+            st.code(
+                str(
+                    error
+                )
+            )
+
+        else:
+            repo_adjusted_columns = st.columns(
+                4
+            )
+
+            repo_adjusted_columns[0].metric(
+                "Specific-funded carry",
+                format_euro(
+                    repo_adjusted_carry
+                    .unchanged_yield_specific_pnl_eur,
+                    decimals=2,
+                ),
+                delta=(
+                    f"{repo_adjusted_carry.specific_repo_rate_percent:.4f}% "
+                    "specific repo"
+                ),
+                delta_color="off",
+                border=True,
+            )
+
+            repo_adjusted_columns[1].metric(
+                "GC-funded carry",
+                format_euro(
+                    repo_adjusted_carry
+                    .unchanged_yield_gc_pnl_eur,
+                    decimals=2,
+                ),
+                delta=(
+                    f"{repo_adjusted_carry.gc_repo_rate_percent:.4f}% "
+                    "GC reference"
+                ),
+                delta_color="off",
+                border=True,
+            )
+
+            repo_adjusted_columns[2].metric(
+                "Funding edge vs GC",
+                format_euro(
+                    repo_adjusted_carry
+                    .financing_advantage_vs_gc_eur,
+                    decimals=2,
+                ),
+                delta=(
+                    f"{repo_adjusted_carry.specialness_bp:+.2f} bp "
+                    "GC minus specific"
+                ),
+                delta_color="off",
+                border=True,
+            )
+
+            repo_adjusted_columns[3].metric(
+                "Breakeven-yield advantage",
+                (
+                    f"{repo_adjusted_carry.breakeven_yield_advantage_bp:+.2f} bp"
+                    if (
+                        repo_adjusted_carry
+                        .breakeven_yield_advantage_bp
+                        is not None
+                    )
+                    else "N/A"
+                ),
+                delta=(
+                    "Extra adverse yield move absorbed by cheaper funding"
+                    if (
+                        repo_adjusted_carry
+                        .breakeven_yield_advantage_bp
+                        is not None
+                    )
+                    else "No valid paired breakeven solve"
+                ),
+                delta_color="off",
+                border=True,
+            )
+
+            repo_adjusted_second_row = st.columns(
+                4
+            )
+
+            repo_adjusted_second_row[0].metric(
+                "Specific repo interest",
+                format_euro(
+                    repo_adjusted_carry
+                    .specific_repo_interest_eur,
+                    decimals=2,
+                ),
+                delta=f"{repo_adjusted_carry.repo_days} day horizon",
+                delta_color="off",
+                border=True,
+            )
+
+            repo_adjusted_second_row[1].metric(
+                "GC repo interest",
+                format_euro(
+                    repo_adjusted_carry
+                    .gc_repo_interest_eur,
+                    decimals=2,
+                ),
+                delta="Same collateral and haircut",
+                delta_color="off",
+                border=True,
+            )
+
+            repo_adjusted_second_row[2].metric(
+                "Specific breakeven move",
+                (
+                    f"{repo_adjusted_carry.specific_breakeven_yield_move_bp:+.2f} bp"
+                    if (
+                        repo_adjusted_carry
+                        .specific_breakeven_yield_move_bp
+                        is not None
+                    )
+                    else "N/A"
+                ),
+                delta=(
+                    f"Exit yield "
+                    f"{repo_adjusted_carry.specific_breakeven_exit_yield_percent:.3f}%"
+                    if (
+                        repo_adjusted_carry
+                        .specific_breakeven_exit_yield_percent
+                        is not None
+                    )
+                    else "No valid solve"
+                ),
+                delta_color="off",
+                border=True,
+            )
+
+            repo_adjusted_second_row[3].metric(
+                "GC breakeven move",
+                (
+                    f"{repo_adjusted_carry.gc_breakeven_yield_move_bp:+.2f} bp"
+                    if (
+                        repo_adjusted_carry
+                        .gc_breakeven_yield_move_bp
+                        is not None
+                    )
+                    else "N/A"
+                ),
+                delta=(
+                    f"Exit yield "
+                    f"{repo_adjusted_carry.gc_breakeven_exit_yield_percent:.3f}%"
+                    if (
+                        repo_adjusted_carry
+                        .gc_breakeven_exit_yield_percent
+                        is not None
+                    )
+                    else "No valid solve"
+                ),
+                delta_color="off",
+                border=True,
+            )
+
+            repo_rate_scenario_frame = pd.DataFrame(
+                [
+                    {
+                        "Repo shock (bp)": (
+                            scenario.repo_rate_shock_bp
+                        ),
+                        "Specific repo (%)": (
+                            scenario
+                            .shocked_specific_repo_rate_percent
+                        ),
+                        "Specialness vs GC (bp)": (
+                            scenario.specialness_vs_gc_bp
+                        ),
+                        "Unchanged-yield carry (€)": (
+                            scenario.financing_adjusted_pnl_eur
+                        ),
+                        "Carry / €1m face (€)": (
+                            scenario
+                            .financing_adjusted_pnl_per_eur_1m_face
+                        ),
+                        "Funding edge vs GC (€)": (
+                            scenario
+                            .financing_advantage_vs_gc_eur
+                        ),
+                        "Funding edge / €1m (€)": (
+                            scenario
+                            .financing_advantage_vs_gc_per_eur_1m_face
+                        ),
+                    }
+                    for scenario
+                    in repo_adjusted_carry.repo_rate_scenarios
+                ]
+            )
+
+            st.dataframe(
+                repo_rate_scenario_frame,
+                hide_index=True,
+                width="stretch",
+                column_config={
+                    "Repo shock (bp)": (
+                        st.column_config.NumberColumn(
+                            "Repo shock",
+                            format="%+.0f bp",
+                        )
+                    ),
+                    "Specific repo (%)": (
+                        st.column_config.NumberColumn(
+                            "Specific repo",
+                            format="%.4f%%",
+                        )
+                    ),
+                    "Specialness vs GC (bp)": (
+                        st.column_config.NumberColumn(
+                            "Specialness vs GC",
+                            format="%+.2f bp",
+                        )
+                    ),
+                    "Unchanged-yield carry (€)": (
+                        st.column_config.NumberColumn(
+                            "Unchanged-yield carry",
+                            format="€%,.2f",
+                        )
+                    ),
+                    "Carry / €1m face (€)": (
+                        st.column_config.NumberColumn(
+                            "Carry / €1m face",
+                            format="€%,.2f",
+                        )
+                    ),
+                    "Funding edge vs GC (€)": (
+                        st.column_config.NumberColumn(
+                            "Funding edge vs GC",
+                            format="€%,.2f",
+                        )
+                    ),
+                    "Funding edge / €1m (€)": (
+                        st.column_config.NumberColumn(
+                            "Funding edge / €1m",
+                            format="€%,.2f",
+                        )
+                    ),
+                },
+            )
+
+            st.caption(
+                "Specific-funded and GC-funded carry use the same bond, "
+                "price, accrued interest, haircut, dates and day-count basis. "
+                "Only the financing rate changes. The repo-rate sensitivity "
+                "table holds the cash-bond yield unchanged and shocks only the "
+                "specific repo rate, isolating funding sensitivity. Transaction "
+                "costs, fail charges, variation margin, haircut opportunity "
+                "cost and future repo roll paths are excluded."
+            )
+
     if selected_money_market_instrument is not None:
         st.markdown(
             '<div class="section-label">Financing-adjusted discount carry</div>',
@@ -2334,6 +2618,13 @@ def main() -> None:
             The breakeven yield is the exit yield at which that
             financing-adjusted horizon P&L is zero.
 
+            When a GC reference is supplied for coupon collateral, RepoLens
+            also compares unchanged-yield carry under the specific repo rate
+            with the same bond funded at GC. The difference isolates the
+            financing advantage or disadvantage of the specific collateral.
+            Repo-rate shocks hold the cash-bond yield unchanged so funding
+            sensitivity is not mixed with outright duration risk.
+
             Money-market discount securities are modelled separately from
             coupon bonds. Their accrued interest is zero. Financing-to-maturity
             carry uses contractual redemption and assumes the entered repo
@@ -2372,7 +2663,8 @@ def main() -> None:
 
             Schedule-derived accrued interest, remaining-maturity buckets,
             cash, repo-interest, specialness, pull-to-par, financed carry,
-            breakeven yield and scenario P&L are **RepoLens-derived analytics**.
+            specific-versus-GC carry, funding-edge and breakeven-yield
+            comparisons, and scenario P&L are **RepoLens-derived analytics**.
 
             Manual collateral mode remains available and unchanged for
             instruments outside the RepoLens reference universe.
