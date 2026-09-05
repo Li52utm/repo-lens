@@ -14,6 +14,8 @@ from src.bond_analytics import (
 from src.repo_adjusted_relative_value import (
     RepoAdjustedRelativeValueValidationError,
     RepoFundingLegInput,
+    SpreadScenarioPoint,
+    analyse_funding_adjusted_spread_breakeven,
     analyse_repo_adjusted_relative_value,
 )
 from src.sovereign_instruments import (
@@ -821,7 +823,7 @@ def main() -> None:
 
         repo_overlay_enabled = st.checkbox(
             "Overlay repo funding economics",
-            value=True,
+            value=False,
             key="rv_repo_overlay_enabled",
             help=(
                 "Add explicit desk / broker specific-repo and matched GC "
@@ -1071,6 +1073,8 @@ def main() -> None:
         )
 
         repo_adjusted_analysis = None
+        funding_breakeven = None
+        funding_adjusted_spread_scenarios = None
 
         if repo_overlay_enabled:
             anchor_dirty_price = dirty_price_from_yield(
@@ -1154,6 +1158,59 @@ def main() -> None:
                         ),
                     ),
                 )
+            )
+
+            spread_scenario_points = tuple(
+                SpreadScenarioPoint(
+                    spread_shock_bp=float(
+                        row["spread_shock_bp"]
+                    ),
+                    cash_pnl_eur=float(
+                        row["total_pnl_eur"]
+                    ),
+                )
+                for _, row in spread_scenarios.iterrows()
+            )
+
+            funding_breakeven = (
+                analyse_funding_adjusted_spread_breakeven(
+                    current_spread_bp=float(
+                        position.spread_bp
+                    ),
+                    funding_overlay_eur=float(
+                        repo_adjusted_analysis
+                        .net_signed_financing_impact_vs_gc_eur
+                    ),
+                    scenario_points=spread_scenario_points,
+                )
+            )
+
+            funding_adjusted_spread_scenarios = (
+                spread_scenarios[
+                    [
+                        "spread_shock_bp",
+                        "shocked_spread_bp",
+                        "total_pnl_eur",
+                    ]
+                ].copy()
+            )
+
+            funding_adjusted_spread_scenarios[
+                "funding_overlay_eur"
+            ] = (
+                repo_adjusted_analysis
+                .net_signed_financing_impact_vs_gc_eur
+            )
+
+            funding_adjusted_spread_scenarios[
+                "funding_adjusted_pnl_eur"
+            ] = (
+                funding_adjusted_spread_scenarios[
+                    "total_pnl_eur"
+                ]
+                + funding_adjusted_spread_scenarios[
+                    "funding_overlay_eur"
+                ]
             )
     except (
         RelativeValueValidationError,
@@ -1497,6 +1554,189 @@ def main() -> None:
             "executable trade recommendation."
         )
 
+        if funding_breakeven is not None:
+            st.markdown(
+                '<div class="section-label">Funding-adjusted spread breakeven</div>',
+                unsafe_allow_html=True,
+            )
+
+            breakeven_columns = st.columns(
+                5
+            )
+
+            breakeven_columns[0].metric(
+                "Net funding overlay vs GC",
+                format_euro(
+                    funding_breakeven.funding_overlay_eur,
+                    decimals=2,
+                ),
+                delta=(
+                    f"{repo_adjusted_analysis.repo_days} day horizon"
+                ),
+                delta_color="off",
+                border=True,
+            )
+
+            breakeven_columns[1].metric(
+                "First-order spread equivalent",
+                format_number(
+                    funding_breakeven
+                    .first_order_equivalent_spread_move_bp,
+                    decimals=2,
+                    suffix=" bp",
+                ),
+                delta="Local cash-RV slope",
+                delta_color="off",
+                border=True,
+            )
+
+            breakeven_columns[2].metric(
+                "Current cash spread",
+                format_number(
+                    funding_breakeven.current_spread_bp,
+                    decimals=2,
+                    suffix=" bp",
+                ),
+                delta="Anchor minus hedge",
+                delta_color="off",
+                border=True,
+            )
+
+            breakeven_level_text = "Outside tested range"
+            breakeven_level_delta = "No extrapolation"
+
+            if (
+                funding_breakeven.within_scenario_range
+                and funding_breakeven.breakeven_spread_level_bp
+                is not None
+            ):
+                breakeven_level_text = format_number(
+                    funding_breakeven
+                    .breakeven_spread_level_bp,
+                    decimals=2,
+                    suffix=" bp",
+                )
+                breakeven_level_delta = (
+                    "Funding-adjusted zero P&L level"
+                )
+
+            breakeven_columns[3].metric(
+                "Funding-adjusted breakeven",
+                breakeven_level_text,
+                delta=breakeven_level_delta,
+                delta_color="off",
+                border=True,
+            )
+
+            breakeven_shock_text = "N/A"
+            breakeven_shock_delta = (
+                funding_breakeven.direction
+            )
+
+            if (
+                funding_breakeven.within_scenario_range
+                and funding_breakeven.breakeven_spread_shock_bp
+                is not None
+            ):
+                breakeven_shock_text = format_number(
+                    funding_breakeven
+                    .breakeven_spread_shock_bp,
+                    decimals=2,
+                    suffix=" bp",
+                )
+
+            breakeven_columns[4].metric(
+                "Breakeven spread shock",
+                breakeven_shock_text,
+                delta=breakeven_shock_delta,
+                delta_color="off",
+                border=True,
+            )
+
+            if not funding_breakeven.within_scenario_range:
+                tested_min_shock = float(
+                    spread_scenarios[
+                        "spread_shock_bp"
+                    ].min()
+                )
+                tested_max_shock = float(
+                    spread_scenarios[
+                        "spread_shock_bp"
+                    ].max()
+                )
+
+                st.warning(
+                    "The funding-adjusted breakeven lies outside the tested "
+                    f"spread-shock range of {tested_min_shock:+.0f} bp to "
+                    f"{tested_max_shock:+.0f} bp. RepoLens does not extrapolate "
+                    "a manufactured breakeven beyond the supplied full-repricing "
+                    "scenario grid."
+                )
+            elif funding_breakeven.interpretation == "ADVERSE_MOVE_CAPACITY":
+                st.success(
+                    "The entered specific-versus-GC funding economics provide "
+                    "an adverse spread-move cushion over the selected repo horizon. "
+                    "The displayed breakeven is the nearest zero crossing on the "
+                    "full-repricing spread-scenario curve."
+                )
+            elif funding_breakeven.interpretation == "FAVOURABLE_MOVE_REQUIRED":
+                st.warning(
+                    "The entered funding economics are a drag on the cash RV trade. "
+                    "A favourable spread move is required to offset that drag over "
+                    "the selected repo horizon."
+                )
+            else:
+                st.info(
+                    "The entered specific-versus-GC funding overlay is zero, so "
+                    "the funding-adjusted breakeven remains at the current cash spread."
+                )
+
+            if funding_adjusted_spread_scenarios is not None:
+                st.dataframe(
+                    funding_adjusted_spread_scenarios,
+                    hide_index=True,
+                    width="stretch",
+                    column_config={
+                        "spread_shock_bp": (
+                            st.column_config.NumberColumn(
+                                "Spread shock",
+                                format="%+.0f bp",
+                            )
+                        ),
+                        "shocked_spread_bp": (
+                            st.column_config.NumberColumn(
+                                "Shocked spread",
+                                format="%.2f bp",
+                            )
+                        ),
+                        "total_pnl_eur": (
+                            st.column_config.NumberColumn(
+                                "Cash RV P&L",
+                                format="€%,.0f",
+                            )
+                        ),
+                        "funding_overlay_eur": (
+                            st.column_config.NumberColumn(
+                                "Repo funding overlay",
+                                format="€%,.0f",
+                            )
+                        ),
+                        "funding_adjusted_pnl_eur": (
+                            st.column_config.NumberColumn(
+                                "Funding-adjusted P&L",
+                                format="€%,.0f",
+                            )
+                        ),
+                    },
+                )
+
+            st.caption(
+                "The repo funding overlay is held constant across the displayed "
+                "cash-spread scenarios. The breakeven root is linearly interpolated "
+                "between adjacent full-repricing scenario points that bracket zero. "
+                "RepoLens does not extrapolate beyond the tested scenario range."
+            )
+
     st.markdown(
         '<div class="section-label">Rate-risk profile</div>',
         unsafe_allow_html=True,
@@ -1641,6 +1881,12 @@ def main() -> None:
             entered specific-repo economics improve the trade versus matched
             GC funding over the selected repo horizon; a negative value means
             they detract from it.
+
+            The funding-adjusted spread breakeven adds that entered repo funding
+            overlay to the full-repricing cash-spread scenario curve. The overlay
+            is held constant across those scenarios, and the zero-P&L crossing is
+            linearly interpolated only between adjacent tested scenario points.
+            RepoLens does not extrapolate a breakeven beyond the scenario grid.
             """
         )
 
@@ -1661,9 +1907,9 @@ def main() -> None:
             desk / broker inputs and are not executable quotes supplied by
             RepoLens.
 
-            Hedge ratios, DV01, spread measures, scenario P&L, specialness and
-            the signed specific-versus-GC funding overlay are RepoLens-derived
-            research analytics.
+            Hedge ratios, DV01, spread measures, scenario P&L, specialness,
+            the signed specific-versus-GC funding overlay and the funding-adjusted
+            spread breakeven are RepoLens-derived research analytics.
             """
         )
 
