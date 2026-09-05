@@ -3,6 +3,18 @@ name = "repolens"
 version = "0.1.0"
 description = "European repo, sovereign relative value and event risk intelligence."
 requires-python = ">=3.12"
+dependencies = [
+    "pandas",
+    "plotly",
+    "streamlit",
+    "reportlab",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pypdf",
+    "pytest",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
