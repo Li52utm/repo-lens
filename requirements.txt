@@ -14,4 +14,4 @@ pytest
 pytest-cov
 hypothesis
 ruff
-mypy
+mypyreportlab>=4.2,<5
