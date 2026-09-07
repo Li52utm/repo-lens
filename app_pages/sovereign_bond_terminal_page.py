@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -12,6 +12,27 @@ from app_components.sovereign_instrument_picker import (
 )
 from src.sovereign_instrument_catalog import (
     master_record_by_isin,
+)
+from src.sovereign_historical_context import (
+    DEFAULT_HISTORICAL_WINDOWS,
+    SovereignHistoricalContext,
+    SovereignHistoricalObservation,
+    build_sovereign_historical_context,
+)
+from src.sovereign_history_store import (
+    SovereignHistoryStore,
+    SovereignHistoryStoreValidationError,
+)
+from src.sovereign_instrument_pdf import (
+    SovereignInstrumentPdfError,
+    render_sovereign_instrument_report_pdf,
+)
+from src.sovereign_instrument_report import (
+    InstrumentReportIdentity,
+    InstrumentReportMarketSnapshot,
+    InstrumentReportNarrative,
+    InstrumentReportProvenance,
+    build_sovereign_instrument_report_model,
 )
 from src.sovereign_instrument_master import (
     BenchmarkStatus,
@@ -34,6 +55,10 @@ from src.sovereign_snapshot import (
 
 GERMAN_BENCHMARK_PATH = Path(
     "data/raw/sovereign/germany_benchmark_yields.csv"
+)
+
+SOVEREIGN_HISTORY_PATH = Path(
+    "data/market/sovereign_history.csv"
 )
 
 REQUIRED_BENCHMARK_COLUMNS = {
@@ -790,6 +815,652 @@ def render_instrument_reference(
 
 
 
+
+def load_persisted_instrument_history(
+    instrument: SovereignInstrument,
+) -> tuple[SovereignHistoricalObservation, ...]:
+    """
+    Load persisted sourced market history for one exact sovereign ISIN.
+
+    Missing history is a valid state. RepoLens must not manufacture a historical
+    series from today's snapshot merely to populate the dashboard.
+    """
+    store = SovereignHistoryStore(
+        SOVEREIGN_HISTORY_PATH
+    )
+
+    return store.for_isin(
+        instrument.isin
+    )
+
+
+def build_available_historical_context(
+    instrument: SovereignInstrument,
+) -> SovereignHistoricalContext | None:
+    """
+    Build 1W/1M/3M/6M/9M/1Y context when persisted observations exist.
+    """
+    observations = load_persisted_instrument_history(
+        instrument
+    )
+
+    if not observations:
+        return None
+
+    try:
+        return build_sovereign_historical_context(
+            observations=observations,
+            windows=DEFAULT_HISTORICAL_WINDOWS,
+        )
+    except Exception:
+        # Partial datasets can legitimately lack observations in one of the
+        # requested windows. Do not manufacture missing history.
+        return None
+
+
+def history_context_frame(
+    context: SovereignHistoricalContext,
+) -> pd.DataFrame:
+    """
+    Convert historical context into the broker-facing range table.
+    """
+    rows: list[dict[str, object]] = []
+
+    for window in context.windows:
+        yield_metric = window.yield_percent
+        price_metric = window.price
+        spread_metric = window.benchmark_spread_bp
+
+        rows.append(
+            {
+                "Window": window.window.label,
+                "Observations": window.observation_count,
+                "Yield low (%)": (
+                    yield_metric.low
+                    if yield_metric is not None
+                    else None
+                ),
+                "Yield high (%)": (
+                    yield_metric.high
+                    if yield_metric is not None
+                    else None
+                ),
+                "Yield median (%)": (
+                    yield_metric.median
+                    if yield_metric is not None
+                    else None
+                ),
+                "Current yield (%)": (
+                    yield_metric.current
+                    if yield_metric is not None
+                    else None
+                ),
+                "Yield percentile": (
+                    yield_metric.percentile
+                    if yield_metric is not None
+                    else None
+                ),
+                "Yield move": (
+                    (
+                        yield_metric.change_from_window_start
+                        * 100.0
+                    )
+                    if yield_metric is not None
+                    else None
+                ),
+                "Price low": (
+                    price_metric.low
+                    if price_metric is not None
+                    else None
+                ),
+                "Price high": (
+                    price_metric.high
+                    if price_metric is not None
+                    else None
+                ),
+                "Current price": (
+                    price_metric.current
+                    if price_metric is not None
+                    else None
+                ),
+                "Spread current (bp)": (
+                    spread_metric.current
+                    if spread_metric is not None
+                    else None
+                ),
+                "Spread move (bp)": (
+                    spread_metric.change_from_window_start
+                    if spread_metric is not None
+                    else None
+                ),
+            }
+        )
+
+    return pd.DataFrame(
+        rows
+    )
+
+
+def build_history_chart(
+    observations: tuple[SovereignHistoricalObservation, ...],
+    current_yield_percent: float,
+) -> go.Figure:
+    """
+    Plot sourced instrument-level yield history when available.
+    """
+    rows = [
+        {
+            "observation_date": observation.observation_date,
+            "yield_percent": observation.yield_percent,
+            "source_name": observation.source_name,
+            "data_status": observation.data_status,
+        }
+        for observation in observations
+        if observation.yield_percent is not None
+    ]
+
+    frame = pd.DataFrame(
+        rows
+    )
+
+    figure = go.Figure()
+
+    if not frame.empty:
+        frame = frame.sort_values(
+            "observation_date"
+        )
+
+        figure.add_trace(
+            go.Scatter(
+                x=frame["observation_date"],
+                y=frame["yield_percent"],
+                mode="lines+markers",
+                name="Sourced yield history",
+                customdata=frame[
+                    [
+                        "source_name",
+                        "data_status",
+                    ]
+                ],
+                hovertemplate=(
+                    "Date: %{x|%d %b %Y}<br>"
+                    "Yield: %{y:.3f}%<br>"
+                    "Source: %{customdata[0]}<br>"
+                    "Status: %{customdata[1]}"
+                    "<extra></extra>"
+                ),
+            )
+        )
+
+    figure.add_hline(
+        y=float(
+            current_yield_percent
+        ),
+        line_width=1,
+        line_dash="dash",
+        annotation_text="Current valuation yield",
+        annotation_position="top left",
+    )
+
+    figure.update_layout(
+        title="Instrument yield history",
+        xaxis_title="Observation date",
+        yaxis_title="Yield (%)",
+        height=410,
+        margin={
+            "l": 20,
+            "r": 20,
+            "t": 70,
+            "b": 30,
+        },
+        showlegend=False,
+    )
+
+    return figure
+
+
+def deterministic_instrument_narrative(
+    *,
+    snapshot: object,
+    context: SovereignHistoricalContext | None,
+) -> InstrumentReportNarrative:
+    """
+    Build concise evidence-led prose without an opaque prediction layer.
+    """
+    observation = (
+        f"{snapshot.display_name} is valued at "
+        f"{snapshot.yield_percent:.3f}% yield with a clean price of "
+        f"{snapshot.clean_price:.4f}."
+    )
+
+    if pd.notna(
+        snapshot.spread_to_germany_bp
+    ):
+        observation += (
+            f" The exact-tenor Germany spread is "
+            f"{snapshot.spread_to_germany_bp:.1f} bp."
+        )
+
+    if context is None:
+        return InstrumentReportNarrative(
+            what_happened=observation,
+            historical_context=(
+                "No persisted sourced instrument-level history is currently "
+                "available for the selected ISIN, so RepoLens does not display "
+                "or infer historical ranges."
+            ),
+            repo_context=(
+                "Repo intelligence is sourced separately from saved "
+                "specific-repo and GC observations."
+            ),
+            event_risk=(
+                "No verified instrument-event dataset is loaded on this page."
+            ),
+            interpretation=(
+                "Current valuation and risk analytics remain available, but "
+                "historical conclusions require sourced observations."
+            ),
+            uncertainty=(
+                "Desk inputs, official references and RepoLens-derived "
+                "analytics are classified separately."
+            ),
+        )
+
+    longest = context.windows[-1]
+    yield_metric = longest.yield_percent
+
+    if yield_metric is None:
+        historical_text = (
+            "Persisted observations exist, but the selected historical series "
+            "does not contain a usable yield history."
+        )
+    else:
+        distance_bp = (
+            yield_metric.distance_from_median
+            * 100.0
+        )
+        side = (
+            "above"
+            if distance_bp >= 0.0
+            else "below"
+        )
+
+        historical_text = (
+            f"Over the {longest.window.label} window, the current yield is "
+            f"{abs(distance_bp):.1f} bp {side} the median and sits at the "
+            f"{yield_metric.percentile:.1f} empirical percentile of "
+            f"{yield_metric.observation_count} sourced observations."
+        )
+
+    return InstrumentReportNarrative(
+        what_happened=observation,
+        historical_context=historical_text,
+        repo_context=(
+            "RepoLens keeps cash-market history and collateral funding "
+            "economics separate so specific-versus-GC inputs are not confused "
+            "with cash-bond yields."
+        ),
+        event_risk=(
+            "No verified instrument-event dataset is loaded on this page yet; "
+            "RepoLens therefore does not manufacture an event warning."
+        ),
+        interpretation=(
+            "Historical statistics are descriptive context rather than a "
+            "directional trade signal."
+        ),
+        uncertainty=(
+            "Percentiles and ranges depend on the available sourced sample and "
+            "should be interpreted alongside data status and observation count."
+        ),
+    )
+
+
+def render_historical_context(
+    *,
+    snapshot: object,
+    instrument: SovereignInstrument,
+    context: SovereignHistoricalContext | None,
+    observations: tuple[SovereignHistoricalObservation, ...],
+) -> None:
+    """
+    Render broker-facing historical trading context.
+    """
+    st.markdown(
+        '<div class="section-label">Historical trading context</div>',
+        unsafe_allow_html=True,
+    )
+
+    if context is None:
+        st.info(
+            "No persisted sourced instrument-level history is available for "
+            f"{instrument.isin}. RepoLens will not manufacture 1W / 1M / 3M / "
+            "6M / 9M / 1Y ranges from benchmark or desk data."
+        )
+        return
+
+    frame = history_context_frame(
+        context
+    )
+
+    st.dataframe(
+        frame,
+        hide_index=True,
+        width="stretch",
+        column_config={
+            "Window": st.column_config.TextColumn(
+                "Window"
+            ),
+            "Observations": st.column_config.NumberColumn(
+                "Obs",
+                format="%d",
+            ),
+            "Yield low (%)": st.column_config.NumberColumn(
+                "Yield low",
+                format="%.3f%%",
+            ),
+            "Yield high (%)": st.column_config.NumberColumn(
+                "Yield high",
+                format="%.3f%%",
+            ),
+            "Yield median (%)": st.column_config.NumberColumn(
+                "Median",
+                format="%.3f%%",
+            ),
+            "Current yield (%)": st.column_config.NumberColumn(
+                "Current",
+                format="%.3f%%",
+            ),
+            "Yield percentile": st.column_config.NumberColumn(
+                "Percentile",
+                format="%.1f",
+            ),
+            "Yield move": st.column_config.NumberColumn(
+                "Move",
+                format="%+.1f bp",
+            ),
+            "Price low": st.column_config.NumberColumn(
+                "Price low",
+                format="%.4f",
+            ),
+            "Price high": st.column_config.NumberColumn(
+                "Price high",
+                format="%.4f",
+            ),
+            "Current price": st.column_config.NumberColumn(
+                "Current price",
+                format="%.4f",
+            ),
+            "Spread current (bp)": st.column_config.NumberColumn(
+                "Spread",
+                format="%+.1f bp",
+            ),
+            "Spread move (bp)": st.column_config.NumberColumn(
+                "Spread move",
+                format="%+.1f bp",
+            ),
+        },
+    )
+
+    st.plotly_chart(
+        build_history_chart(
+            observations=observations,
+            current_yield_percent=snapshot.yield_percent,
+        ),
+        width="stretch",
+        config={
+            "displaylogo": False,
+            "scrollZoom": False,
+        },
+    )
+
+    st.caption(
+        f"History source status: {context.latest_data_status} · "
+        f"{context.latest_source_name} · Latest observation "
+        f"{context.latest_observation_date.strftime('%d %B %Y')}. "
+        "Percentiles are empirical and sample counts are shown explicitly."
+    )
+
+
+def render_repo_intelligence_placeholder(
+    instrument: SovereignInstrument,
+) -> None:
+    """
+    Reserve the instrument-level repo workflow without inventing repo quotes.
+    """
+    st.markdown(
+        '<div class="section-label">Repo intelligence</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.info(
+        "Instrument-level repo intelligence will appear here when sourced "
+        f"specific-repo and matched GC observations exist for {instrument.isin}. "
+        "RepoLens does not manufacture executable repo rates."
+    )
+
+    st.caption(
+        "Planned outputs: current specialness, own-history percentile, 1D/1W "
+        "change, financing advantage versus GC, repo-adjusted carry and "
+        "term-structure context."
+    )
+
+
+def render_event_intelligence_placeholder(
+    instrument: SovereignInstrument,
+) -> None:
+    """
+    Surface an explicit empty event state until verified event feeds are wired.
+    """
+    st.markdown(
+        '<div class="section-label">Event intelligence</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.info(
+        "No verified instrument-event feed is loaded for this page yet. "
+        "RepoLens therefore does not display auction, coupon, redemption or "
+        "central-bank countdowns until their source and date are verified."
+    )
+
+    st.caption(
+        f"Selected instrument: {instrument.isin}. Event relevance will be "
+        "instrument-, country- and currency-aware."
+    )
+
+
+def render_narrative_and_report(
+    *,
+    instrument: SovereignInstrument,
+    snapshot: object,
+    context: SovereignHistoricalContext | None,
+) -> None:
+    """
+    Render deterministic narrative and an auditable PDF export when history exists.
+    """
+    narrative = deterministic_instrument_narrative(
+        snapshot=snapshot,
+        context=context,
+    )
+
+    st.markdown(
+        '<div class="section-label">RepoLens narrative</div>',
+        unsafe_allow_html=True,
+    )
+
+    narrative_left, narrative_right = st.columns(
+        [
+            3,
+            1,
+        ]
+    )
+
+    with narrative_left:
+        st.markdown(
+            f"""
+            **What happened**
+
+            {narrative.what_happened}
+
+            **Historical context**
+
+            {narrative.historical_context}
+
+            **Repo context**
+
+            {narrative.repo_context}
+
+            **Event risk**
+
+            {narrative.event_risk}
+
+            **Interpretation**
+
+            {narrative.interpretation}
+
+            **Uncertainty**
+
+            {narrative.uncertainty}
+            """
+        )
+
+    with narrative_right:
+        st.markdown(
+            "**Instrument report**"
+        )
+
+        if context is None:
+            st.button(
+                "Generate Report",
+                disabled=True,
+                width="stretch",
+                help=(
+                    "A sourced historical series is required before RepoLens "
+                    "can produce the full instrument report."
+                ),
+            )
+
+            st.caption(
+                "Report export unlocks when sourced instrument history exists."
+            )
+            return
+
+        market_source = (
+            snapshot.source_name
+            or "RepoLens market input"
+        )
+
+        market_status = (
+            snapshot.data_status.value
+            if hasattr(
+                snapshot.data_status,
+                "value",
+            )
+            else str(
+                snapshot.data_status
+            )
+        )
+
+        report_model = build_sovereign_instrument_report_model(
+            identity=InstrumentReportIdentity(
+                isin=instrument.isin,
+                display_name=snapshot.display_name,
+                country=instrument.country.value,
+                currency="EUR",
+                maturity_date=instrument.maturity_date,
+                coupon_percent=(
+                    instrument.annual_coupon_rate
+                    * 100.0
+                ),
+            ),
+            market=InstrumentReportMarketSnapshot(
+                as_of_date=context.latest_observation_date,
+                source_name=context.latest_source_name,
+                data_status=context.latest_data_status,
+                price_per_100=(
+                    context.windows[-1].price.current
+                    if context.windows[-1].price is not None
+                    else None
+                ),
+                yield_percent=(
+                    context.windows[-1].yield_percent.current
+                    if context.windows[-1].yield_percent is not None
+                    else None
+                ),
+                benchmark_spread_bp=(
+                    context.windows[-1].benchmark_spread_bp.current
+                    if context.windows[-1].benchmark_spread_bp is not None
+                    else None
+                ),
+                benchmark_name=context.benchmark_name,
+            ),
+            historical_context=context,
+            narrative=narrative,
+            generated_at=datetime.now(),
+            repo=None,
+            events=(),
+            provenance=(
+                InstrumentReportProvenance(
+                    label="Historical market",
+                    source_name=context.latest_source_name,
+                    data_status=context.latest_data_status,
+                    as_of=context.latest_observation_date.isoformat(),
+                    notes=(
+                        "Persisted sourced instrument-level observations."
+                    ),
+                ),
+                InstrumentReportProvenance(
+                    label="Current terminal valuation",
+                    source_name=market_source,
+                    data_status=market_status,
+                    as_of=(
+                        snapshot.observation_date.isoformat()
+                        if snapshot.observation_date is not None
+                        else snapshot.settlement_date.isoformat()
+                    ),
+                    notes=(
+                        "Displayed terminal valuation may differ from the "
+                        "latest persisted historical observation."
+                    ),
+                ),
+            ),
+        )
+
+        try:
+            pdf_bytes = render_sovereign_instrument_report_pdf(
+                report_model
+            )
+        except SovereignInstrumentPdfError as error:
+            st.error(
+                "RepoLens could not generate the instrument report."
+            )
+            st.code(
+                str(
+                    error
+                )
+            )
+            return
+
+        safe_isin = instrument.isin.replace(
+            "/",
+            "_",
+        )
+
+        st.download_button(
+            "Generate Report",
+            data=pdf_bytes,
+            file_name=(
+                f"RepoLens_{safe_isin}_Instrument_Report.pdf"
+            ),
+            mime="application/pdf",
+            width="stretch",
+        )
+
+        st.caption(
+            "PDF is generated from the same structured report model used by "
+            "the instrument intelligence workflow."
+        )
+
+
 def main() -> None:
     """
     Render the RepoLens Sovereign Bond Terminal.
@@ -1058,6 +1729,26 @@ def main() -> None:
             ),
         )
 
+        try:
+            historical_observations = load_persisted_instrument_history(
+                instrument
+            )
+            historical_context = build_available_historical_context(
+                instrument
+            )
+        except SovereignHistoryStoreValidationError as error:
+            st.warning(
+                "RepoLens found persisted sovereign history but could not "
+                "validate it. Historical context is disabled for this instrument."
+            )
+            st.code(
+                str(
+                    error
+                )
+            )
+            historical_observations = ()
+            historical_context = None
+
     except SovereignSnapshotValidationError as error:
         st.error(
             "RepoLens could not value the selected instrument."
@@ -1080,8 +1771,8 @@ def main() -> None:
             Sovereign Bond Terminal
         </div>
         <div class="repolens-subtitle">
-            Multi-instrument Bund and BTP valuation,
-            reference-data lineage, duration risk, DV01
+            Sovereign valuation, historical market context,
+            repo and event intelligence, duration risk, DV01
             and full-repricing scenario analysis.
         </div>
         """,
@@ -1131,6 +1822,39 @@ def main() -> None:
 
     render_snapshot_metrics(
         snapshot
+    )
+
+    st.divider()
+
+    render_historical_context(
+        snapshot=snapshot,
+        instrument=instrument,
+        context=historical_context,
+        observations=historical_observations,
+    )
+
+    st.divider()
+
+    intelligence_left, intelligence_right = st.columns(
+        2
+    )
+
+    with intelligence_left:
+        render_repo_intelligence_placeholder(
+            instrument
+        )
+
+    with intelligence_right:
+        render_event_intelligence_placeholder(
+            instrument
+        )
+
+    st.divider()
+
+    render_narrative_and_report(
+        instrument=instrument,
+        snapshot=snapshot,
+        context=historical_context,
     )
 
     st.divider()
@@ -1254,6 +1978,16 @@ def main() -> None:
             When an exact German tenor exists, the displayed BTP–Bund
             spread is a derived research measure. When it does not,
             the spread is reported as unavailable.
+
+
+            **Historical context and reports**
+
+            Historical windows are calculated only from persisted sourced
+            instrument-level observations. Missing history is left unavailable
+            rather than inferred from benchmarks or today's desk input.
+
+            PDF reports use the same structured RepoLens report model as the
+            instrument intelligence workflow and preserve source/status metadata.
             """
         )
 
