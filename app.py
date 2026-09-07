@@ -15,7 +15,7 @@ APP_SUBTITLE = (
 
 st.set_page_config(
     page_title="RepoLens",
-    page_icon="📈",
+    page_icon="ðŸ“ˆ",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -528,6 +528,11 @@ def main() -> None:
             ),
         ],
         "Sovereign Markets": [
+            st.Page(
+                "app_pages/sovereign_observations_page.py",
+                title="Sovereign Observations",
+                icon=":material/table_view:",
+            ),
             st.Page(
                 "app_pages/sovereign_bond_terminal_page.py",
                 title="Bond Terminal",
