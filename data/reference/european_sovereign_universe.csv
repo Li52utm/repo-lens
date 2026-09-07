@@ -1,0 +1,255 @@
+﻿country_code,country_name,issuer,instrument_type,isin,coupon_percent,maturity_date,outstanding_eur,source_name,source_url,data_status
+BE,Belgium,Kingdom of Belgium,OLO,BE0000341504,0.800000,2027-06-22,16485000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000351602,0.000000,2027-10-22,11078000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000291972,5.500000,2028-03-28,19287939135.27,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000345547,0.800000,2028-06-22,16337000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000347568,0.900000,2029-06-22,20304000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000362716,2.700000,2029-10-22,10058000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000349580,0.100000,2030-06-22,16327000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000365743,2.600000,2030-10-22,9186000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000335449,1.000000,2031-06-22,17922000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000368770,3.100000,2031-08-22,9657000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000352618,0.000000,2031-10-22,14087000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000326356,4.000000,2032-03-28,9580000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000354630,0.350000,2032-06-22,17672000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000346552,1.250000,2033-04-22,12455000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000357666,3.000000,2033-06-22,23818000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000333428,3.000000,2034-06-22,13086000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000360694,2.850000,2034-10-22,20296000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000304130,5.000000,2035-03-28,20971692799.67,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000363722,3.100000,2035-06-22,15879000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000366758,3.400000,2036-06-22,13252000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000344532,1.450000,2037-06-22,7874000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000336454,1.900000,2038-06-22,10569000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000356650,2.750000,2039-04-22,9860000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000350596,0.400000,2040-06-22,10425000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000320292,4.250000,2041-03-28,18445000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000364738,3.450000,2042-06-22,5000000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000359688,3.450000,2043-06-22,6369000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000331406,3.750000,2045-06-22,12146000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000338476,1.600000,2047-06-22,11064000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000348574,1.700000,2050-06-22,11181000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000355645,1.400000,2053-06-22,10639000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000358672,3.300000,2054-06-22,10932000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000361700,3.500000,2055-06-22,9802000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000367764,4.350000,2056-06-22,7757000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000343526,2.250000,2057-06-22,9426000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000340498,2.150000,2066-06-22,8775000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+BE,Belgium,Kingdom of Belgium,OLO,BE0000353624,0.650000,2071-06-22,7370000000.00,Belgian Debt Agency,https://www.debtagency.be/en/productolostatistics,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E337,,2026-09-16,14000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,SCHATZ,DE000BU22064,2.700000,2026-09-17,19000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE0001141844,0.000000,2026-10-09,24000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E345,,2026-10-14,12500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E352,,2026-11-18,12500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E378,,2026-12-09,11000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,SCHATZ,DE000BU22072,2.000000,2026-12-10,19000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E360,,2027-01-13,13500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102416,0.250000,2027-02-15,30500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E386,,2027-02-17,11000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,SCHATZ,DE000BU22080,2.200000,2027-03-11,18500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E394,,2027-03-17,8000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E402,,2027-04-14,8000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE0001141851,0.000000,2027-04-16,22000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E410,,2027-05-12,8000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,SCHATZ,DE000BU22098,1.700000,2027-06-10,18000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E428,,2027-06-16,8000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135044,6.500000,2027-07-04,13750000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E436,,2027-07-14,5500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102424,0.500000,2027-08-15,32500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUBILL,DE000BU0E444,,2027-08-18,3000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,SCHATZ,DE000BU22106,1.900000,2027-09-16,19000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE0001030740,1.300000,2027-10-15,10500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE0001141869,1.300000,2027-10-15,30000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102523,0.000000,2027-11-15,22000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,SCHATZ,DE000BU22114,2.000000,2027-12-16,21000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135069,5.625000,2028-01-04,17000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102440,0.500000,2028-02-15,28500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,SCHATZ,DE000BU22122,2.100000,2028-03-15,22000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE000BU25000,2.200000,2028-04-13,25000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,SCHATZ,DE000BU22130,2.500000,2028-06-14,22000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135085,4.750000,2028-07-04,13750000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102457,0.250000,2028-08-15,28500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,SCHATZ,DE000BU22148,2.700000,2028-09-13,17000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE000BU25018,2.400000,2028-10-19,29500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102556,0.000000,2028-11-15,27000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102465,0.250000,2029-02-15,29500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE000BU25026,2.100000,2029-04-12,25000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE000BU35025,2.100000,2029-04-12,8000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102473,0.000000,2029-08-15,29500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE000BU25034,2.500000,2029-10-11,24000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102622,2.100000,2029-11-15,26000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135143,6.250000,2030-01-04,11750000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102499,0.000000,2030-02-15,28000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001030559,0.500000,2030-04-15,22150000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE000BU25042,2.400000,2030-04-18,32000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001030708,0.000000,2030-08-15,11000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102507,0.000000,2030-08-15,33500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE000BU25059,2.200000,2030-10-10,31000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU27006,2.400000,2030-11-15,28000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135176,5.500000,2031-01-04,21500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102531,0.000000,2031-02-15,28000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE000BU25067,2.500000,2031-04-16,36000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001030732,0.000000,2031-08-15,9500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102564,0.000000,2031-08-15,32000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BOBL,DE000BU25075,2.900000,2031-10-08,17500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102580,0.000000,2032-02-15,31000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102606,1.700000,2032-08-15,28000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU27014,2.500000,2032-11-15,26000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2Z007,2.300000,2033-02-15,38250000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU3Z005,2.300000,2033-02-15,13500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001030583,0.100000,2033-04-15,10650000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2Z015,2.600000,2033-08-15,30500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2Z023,2.200000,2034-02-15,35000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135226,4.750000,2034-07-04,24500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2Z031,2.600000,2034-08-15,35000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2Z049,2.500000,2035-02-15,35000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU3Z047,2.500000,2035-02-15,9500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102515,0.000000,2035-05-15,23750000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2Z056,2.600000,2035-08-15,33500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2Z064,2.900000,2036-02-15,42500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102549,0.000000,2036-05-15,27250000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2Z072,3.000000,2036-08-15,18000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135275,4.000000,2037-01-04,29250000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102598,1.000000,2038-05-15,33250000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135325,4.250000,2039-07-04,19250000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135366,4.750000,2040-07-04,23000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2F009,2.600000,2041-05-15,26000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU3F007,2.600000,2041-05-15,4750000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135432,3.250000,2042-07-04,23000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001135481,2.500000,2044-07-04,34500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001030575,0.100000,2046-04-15,14250000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102341,2.500000,2046-08-15,37250000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2T000,3.400000,2047-05-15,11500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102432,1.250000,2048-08-15,43500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001030724,0.000000,2050-08-15,13500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102481,0.000000,2050-08-15,45500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102572,0.000000,2052-08-15,38000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001030757,1.800000,2053-08-15,13500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE0001102614,1.800000,2053-08-15,36500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2D004,2.500000,2054-08-15,30000000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+DE,Germany,Federal Republic of Germany,BUND,DE000BU2D012,2.900000,2056-08-15,33500000000.00,German Finance Agency,https://www.deutsche-finanzagentur.de/bundeswertpapiere/handel/umlaufende-bundeswertpapiere,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000128H5,1.300000,2026-10-31,28677500000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,BONO,ES0000012J15,0.000000,2027-01-31,22790200000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000128P8,1.500000,2027-04-30,25929400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,BONO,ES0000012M77,2.500000,2027-05-31,23815500000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012G26,0.800000,2027-07-30,23143600000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012A89,1.450000,2027-10-31,25155800000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000128S2,0.650000,2027-11-30,22949400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012I08,0.000000,2028-01-31,28408100000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012B39,1.400000,2028-04-30,27973800000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,BONO,ES0000012O59,2.400000,2028-05-31,22340300000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012B88,1.400000,2028-07-30,26730200000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000124C5,5.150000,2028-10-31,24293800000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000011868,6.000000,2029-01-31,26658800000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,BONO,ES0000012P90,2.350000,2029-03-31,15997100000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012E51,1.450000,2029-04-30,24565300000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,BONO,ES0000012M51,3.500000,2029-05-31,28936000000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012K53,0.800000,2029-07-30,27424400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012F43,0.600000,2029-10-31,25484300000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,BONO,ES0000012O00,2.700000,2030-01-31,22684400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012F76,0.500000,2030-04-30,27585400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000127A2,1.950000,2030-07-30,27638800000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012G34,1.250000,2030-10-31,30246200000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000127C8,1.000000,2030-11-30,26744900000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012H41,0.100000,2031-04-30,28223300000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,BONO,ES0000012Q16,2.600000,2031-05-31,14988700000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012N43,3.100000,2031-07-30,28635900000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012I32,0.500000,2031-10-31,25958100000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012K20,0.700000,2032-04-30,29100300000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012411,5.750000,2032-07-30,26118100000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012K61,2.550000,2032-10-31,27361200000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012P74,3.000000,2033-01-31,22920500000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012L52,3.150000,2033-04-30,25679600000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000128Q6,2.350000,2033-07-30,22621500000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012L78,3.550000,2033-10-31,28720100000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012C12,0.700000,2033-11-30,28400200000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012M85,3.250000,2034-04-30,26273700000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012N35,3.450000,2034-10-31,25957400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012O67,3.150000,2035-04-30,26234500000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012E69,1.850000,2035-07-30,25146200000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012P33,3.200000,2035-10-31,28446000000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012Q08,3.300000,2036-04-30,22984900000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012S22,3.400000,2036-10-31,19665900000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012O18,1.150000,2036-11-30,10641200000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012932,4.200000,2037-01-31,25439700000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012I24,0.850000,2037-07-30,20424300000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012L60,3.900000,2039-07-30,18678400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012M69,2.050000,2039-11-30,10238300000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000120N0,4.900000,2040-07-30,21996400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012G42,1.200000,2040-10-31,19796300000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012O75,3.500000,2041-01-31,16541400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000121S7,4.700000,2041-07-30,22665500000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012J07,1.000000,2042-07-30,18385000000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012K95,3.450000,2043-07-30,20498600000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000124H4,5.150000,2044-10-31,18688700000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000128C6,2.900000,2046-10-31,21026400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012B47,2.700000,2048-10-31,22127800000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012F19,1.000000,2048-11-30,435000000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012F27,1.050000,2049-11-30,435000000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012G00,1.000000,2050-10-31,25786500000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012F35,1.100000,2050-11-30,435000000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012K46,1.900000,2052-10-31,19990400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012M93,4.000000,2054-10-31,16339000000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012R56,3.950000,2056-10-31,8914400000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000126D8,4.000000,2064-10-31,1000000000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES00000128E2,3.450000,2066-07-30,15926600000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+ES,Spain,Kingdom of Spain,OBLIGACION,ES0000012H58,1.450000,2071-10-31,9161200000.00,Tesoro Público,https://tesoro.es/en/deuda-publica/valores-del-tesoro/valores-en-circulacion,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400FYQ4,2.500000,2026-09-24,24030000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013200813,0.250000,2026-11-25,36708000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014003513,0.000000,2027-02-25,38448000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013250560,1.000000,2027-05-25,40908000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400NBC6,2.500000,2027-09-24,40397000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0011317783,2.750000,2027-10-25,61013000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400AIN5,0.750000,2028-02-25,51178000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0000571226,0.000000,2028-03-28,46232603.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013286192,0.750000,2028-05-25,67202000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400XLW2,2.400000,2028-09-24,48096000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013341682,0.750000,2028-11-25,62095000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400HI98,2.750000,2029-02-25,63538000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0000571218,5.500000,2029-04-25,44514880462.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013407236,0.500000,2029-05-25,58805000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014016G71,2.400000,2029-09-24,30313000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013451507,0.000000,2029-11-25,49931000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400PM68,2.750000,2030-02-25,60789000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0011883966,2.500000,2030-05-25,73381000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013516549,0.000000,2030-11-25,58857000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400Z2L7,2.700000,2031-02-25,60070000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0012993103,1.500000,2031-05-25,71282000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014002WK3,0.000000,2031-11-25,59865000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014018OI0,3.250000,2032-02-25,24260000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014007L00,0.000000,2032-05-25,50484000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0000187635,5.750000,2032-10-25,35192322600.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400BKZ3,2.000000,2032-11-25,61439000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400H7V7,3.000000,2033-05-25,50596000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400L834,3.500000,2033-11-25,63249000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013313582,1.250000,2034-05-25,65035000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400QMF9,3.000000,2034-11-25,52348000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0010070060,4.750000,2035-04-25,37723000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400X8V5,3.200000,2035-05-25,54712000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014012II5,3.500000,2035-11-25,59064000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013154044,1.250000,2036-05-25,71354000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014018YR0,3.700000,2036-11-25,33304000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014017Z10,3.800000,2037-06-25,12119000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014009O62,1.250000,2038-05-25,33712000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0010371401,4.000000,2038-10-25,29884000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013234333,1.750000,2039-06-25,36304000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013515806,0.500000,2040-05-25,40551000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0010773192,4.500000,2041-04-25,43447000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400WYO4,3.600000,2042-05-25,26187000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400CMX2,2.500000,2043-05-25,27954000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014002JM6,0.500000,2044-06-25,29953000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0011461037,3.250000,2045-05-25,31657000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014015MU5,4.100000,2046-05-25,18682000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013257524,2.000000,2048-05-25,31992000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400NEF3,3.000000,2049-06-25,17612000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013404969,1.500000,2050-05-25,34348000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013480613,0.750000,2052-05-25,33622000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014004J31,0.750000,2053-05-25,33416000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400FTH3,3.000000,2054-05-25,25978000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0010171975,4.000000,2055-04-25,23988000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400OHF4,3.250000,2055-05-25,25005000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR001400XJJ3,3.750000,2056-05-25,20676000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014016CV2,4.400000,2057-05-25,11001000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0010870956,4.000000,2060-04-25,22843000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0013154028,1.750000,2066-05-25,18394000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE
+FR,France,French Republic,OAT,FR0014001NN8,0.500000,2072-05-25,14472000000.00,Agence France Trésor,https://www.aft.gouv.fr/en/encours-detaille-oat,OFFICIAL_REFERENCE

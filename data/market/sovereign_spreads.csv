@@ -1,0 +1,4 @@
+﻿spread_name,observation_date,observation_time,spread_bp,change_percent,left_yield_percent,right_yield_percent,left_label,right_label,source_name,data_status
+BTP-BUND,2026-09-07,13:07,82.000000,1.360000,4.170000,3.350000,BTP,BUND,Teleborsa / Borsa Italiana spread overview,PUBLIC_REFERENCE
+BONO-BUND,2026-09-07,13:07,42.000000,-1.590000,3.770000,3.350000,BONO,BUND,Teleborsa / Borsa Italiana spread overview,PUBLIC_REFERENCE
+OAT-BUND,2026-09-07,13:07,86.000000,0.100000,4.220000,3.350000,OAT,BUND,Teleborsa / Borsa Italiana spread overview,PUBLIC_REFERENCE
