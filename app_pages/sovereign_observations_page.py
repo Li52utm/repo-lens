@@ -11,12 +11,11 @@ from src.sovereign_history_store import (
     SovereignHistoryStore,
     SovereignHistoryStoreValidationError,
 )
-from src.sovereign_instrument_catalog import (
-    all_instruments,
-)
-from src.sovereign_instruments import (
-    SovereignCountry,
-    SovereignInstrument,
+from src.sovereign_desk_universe import (
+    DeskSovereignInstrument,
+    load_desk_sovereign_universe,
+    universe_counts_by_country,
+    universe_country_names,
 )
 from src.sovereign_morning_commentary import (
     build_sovereign_morning_commentary,
@@ -441,36 +440,21 @@ def render_european_benchmark_monitor(
             "country_name"
         ]
         .drop_duplicates()
+        .sort_values()
         .tolist()
     )
 
-    multi_tenor_countries = [
-        country
-        for country in curve_countries
-        if (
-            latest_yields.loc[
-                latest_yields[
-                    "country_name"
-                ].eq(
-                    country
-                ),
-                "tenor_years",
-            ].nunique()
-            > 1
-        )
-    ]
-
-    if not multi_tenor_countries:
+    if not curve_countries:
         return
 
     selected_country = st.selectbox(
-        "Benchmark curve",
-        options=multi_tenor_countries,
+        "Benchmark country",
+        options=curve_countries,
         index=(
-            multi_tenor_countries.index(
+            curve_countries.index(
                 "Italy"
             )
-            if "Italy" in multi_tenor_countries
+            if "Italy" in curve_countries
             else 0
         ),
         key="sovereign_european_benchmark_curve_country",
@@ -488,6 +472,14 @@ def render_european_benchmark_monitor(
 
     figure = go.Figure()
 
+    chart_mode = (
+        "lines+markers+text"
+        if len(
+            curve
+        ) > 1
+        else "markers+text"
+    )
+
     figure.add_trace(
         go.Scatter(
             x=curve[
@@ -496,7 +488,7 @@ def render_european_benchmark_monitor(
             y=curve[
                 "yield_percent"
             ],
-            mode="lines+markers+text",
+            mode=chart_mode,
             text=[
                 f"{int(value)}Y"
                 for value in curve[
@@ -547,6 +539,15 @@ def render_european_benchmark_monitor(
             "scrollZoom": False,
         },
     )
+
+    if len(
+        curve
+    ) == 1:
+        st.caption(
+            f"Only one public benchmark tenor is currently persisted for "
+            f"{selected_country}. The selector still lets you inspect every "
+            "covered country rather than hiding single-tenor markets."
+        )
 
     st.caption(
         "These are public Euronext MTS benchmark/index yields. They broaden "
@@ -755,7 +756,7 @@ def change_from_lookback(
 
 def latest_instrument_row(
     *,
-    instrument: SovereignInstrument,
+    instrument: DeskSovereignInstrument,
     frame: pd.DataFrame,
 ) -> dict[
     str,
@@ -772,7 +773,7 @@ def latest_instrument_row(
     if instrument_history.empty:
         return {
             "Country": instrument.country.value,
-            "Sector": f"{instrument.benchmark_tenor_years}Y",
+            "Sector": f"{instrument.benchmark_tenor_years}Y bucket",
             "Bond": instrument.display_name,
             "ISIN": instrument.isin,
             "Maturity": instrument.maturity_date,
@@ -830,7 +831,7 @@ def latest_instrument_row(
 
     return {
         "Country": instrument.country.value,
-        "Sector": f"{instrument.benchmark_tenor_years}Y",
+        "Sector": f"{instrument.benchmark_tenor_years}Y bucket",
         "Bond": instrument.display_name,
         "ISIN": instrument.isin,
         "Maturity": instrument.maturity_date,
@@ -1006,22 +1007,30 @@ def build_curve_chart(
     if not available.empty:
         available[
             "Tenor"
-        ] = (
+        ] = pd.to_numeric(
             available[
                 "Sector"
             ]
-            .str.replace(
-                "Y",
-                "",
-                regex=False,
-            )
             .astype(
-                float
+                "string"
             )
+            .str.extract(
+                r"^\s*(\d+(?:\.\d+)?)",
+                expand=False,
+            ),
+            errors="coerce",
         )
 
-        available = available.sort_values(
-            "Tenor"
+        available = (
+            available.loc[
+                available[
+                    "Tenor"
+                ].notna()
+            ]
+            .sort_values(
+                "Tenor"
+            )
+            .copy()
         )
 
     figure = go.Figure()
@@ -1082,7 +1091,7 @@ def build_curve_chart(
 
 def render_bond_history(
     *,
-    instrument: SovereignInstrument,
+    instrument: DeskSovereignInstrument,
     history: pd.DataFrame,
 ) -> None:
     instrument_history = history.loc[
@@ -1099,7 +1108,7 @@ def render_bond_history(
 
     st.caption(
         f"{instrument.isin} · "
-        f"{instrument.benchmark_tenor_years}Y sector · "
+        f"{instrument.benchmark_tenor_years}Y maturity bucket · "
         f"maturity {instrument.maturity_date.strftime('%d %b %Y')}"
     )
 
@@ -1293,7 +1302,7 @@ def main() -> None:
             )
         )
 
-        instruments = all_instruments()
+        instruments = load_desk_sovereign_universe()
 
     except (
         SovereignHistoryStoreValidationError,
@@ -1327,12 +1336,67 @@ def main() -> None:
 
     st.divider()
 
+    universe_counts = universe_counts_by_country(
+        instruments
+    )
+
+    st.subheader(
+        "Cash sovereign universe"
+    )
+
+    st.caption(
+        "Reference-universe coverage is separate from exact market-observation "
+        "coverage. Instruments without a persisted price/yield stay visible "
+        "and are marked unavailable rather than being fabricated."
+    )
+
+    universe_metric_columns = st.columns(
+        4
+    )
+
+    universe_metric_columns[
+        0
+    ].metric(
+        "Countries",
+        len(
+            universe_counts
+        ),
+    )
+
+    universe_metric_columns[
+        1
+    ].metric(
+        "Reference instruments",
+        len(
+            instruments
+        ),
+    )
+
+    universe_metric_columns[
+        2
+    ].metric(
+        "Italy instruments",
+        universe_counts.get(
+            "Italy",
+            0,
+        ),
+    )
+
+    universe_metric_columns[
+        3
+    ].metric(
+        "UK gilts",
+        universe_counts.get(
+            "United Kingdom",
+            0,
+        ),
+    )
+
     country_options = [
         "All",
-        *[
-            country.value
-            for country in SovereignCountry
-        ],
+        *universe_country_names(
+            instruments
+        ),
     ]
 
     control_left, control_middle, control_right = st.columns(
@@ -1345,13 +1409,13 @@ def main() -> None:
 
     with control_left:
         country_filter = st.selectbox(
-            "Country",
+            "Cash bond country",
             options=country_options,
             index=(
                 country_options.index(
-                    SovereignCountry.ITALY.value
+                    "Italy"
                 )
-                if SovereignCountry.ITALY.value in country_options
+                if "Italy" in country_options
                 else 0
             ),
             key="sovereign_observations_country",
@@ -1370,47 +1434,69 @@ def main() -> None:
         "All",
         *sorted(
             {
-                f"{instrument.benchmark_tenor_years}Y"
+                f"{instrument.benchmark_tenor_years}Y bucket"
                 for instrument in selected_country_instruments
             },
             key=lambda value: int(
-                value.replace(
+                value.split(
                     "Y",
-                    "",
-                )
+                    1,
+                )[
+                    0
+                ]
             ),
         ),
     ]
 
     with control_middle:
         sector_filter = st.selectbox(
-            "Sector",
+            "Maturity sector",
             options=sector_options,
             index=0,
             key="sovereign_observations_sector",
         )
 
-    with control_right:
-        search_text = st.text_input(
-            "Search",
-            placeholder="Bond name or ISIN",
-            key="sovereign_observations_search",
-        )
-
-    filtered_instruments = tuple(
+    sector_filtered_instruments = tuple(
         instrument
         for instrument in selected_country_instruments
         if (
             sector_filter == "All"
-            or f"{instrument.benchmark_tenor_years}Y" == sector_filter
+            or f"{instrument.benchmark_tenor_years}Y bucket" == sector_filter
         )
-        and (
-            not search_text.strip()
-            or search_text.strip().lower()
-            in (
-                f"{instrument.display_name} "
+    )
+
+    bond_options = {
+        "All bonds": None,
+        **{
+            (
+                f"{instrument.benchmark_tenor_years}Y · "
+                f"{instrument.display_name} · "
                 f"{instrument.isin}"
-            ).lower()
+            ): instrument.isin
+            for instrument in sector_filtered_instruments
+        },
+    }
+
+    with control_right:
+        selected_bond_label = st.selectbox(
+            "Bond",
+            options=list(
+                bond_options
+            ),
+            index=0,
+            key="sovereign_observations_bond_filter",
+        )
+
+    selected_bond_isin = bond_options[
+        selected_bond_label
+    ]
+
+    filtered_instruments = tuple(
+        instrument
+        for instrument in sector_filtered_instruments
+        if (
+            selected_bond_isin is None
+            or instrument.isin == selected_bond_isin
         )
     )
 
