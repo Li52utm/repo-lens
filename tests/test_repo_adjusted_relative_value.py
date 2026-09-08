@@ -1,12 +1,16 @@
+import pandas as pd
 import pytest
 
 from src.repo_adjusted_relative_value import (
     RepoAdjustedRelativeValueValidationError,
     RepoFundingLegInput,
+    ScannerRepoFundingInput,
     SpreadScenarioPoint,
     analyse_funding_adjusted_spread_breakeven,
     analyse_repo_adjusted_relative_value,
     analyse_repo_funding_leg,
+    analyse_scanner_repo_funding,
+    enrich_opportunity_scanner_with_repo,
 )
 from src.sovereign_relative_value import PositionDirection
 
@@ -499,3 +503,295 @@ def test_spread_breakeven_requires_scenarios_on_both_sides_of_zero() -> None:
             funding_overlay_eur=5_000.0,
             scenario_points=scenarios,
         )
+
+
+def make_scanner_funding(
+    *,
+    isin: str,
+    specific_repo_rate_percent: float = 1.50,
+    gc_repo_rate_percent: float = 2.00,
+    dirty_price_per_100: float = 100.0,
+    haircut_percent: float = 0.0,
+    repo_days: int = 30,
+    day_count_basis: int = 360,
+) -> ScannerRepoFundingInput:
+    return ScannerRepoFundingInput(
+        isin=isin,
+        dirty_price_per_100=dirty_price_per_100,
+        haircut_percent=haircut_percent,
+        specific_repo_rate_percent=specific_repo_rate_percent,
+        gc_repo_rate_percent=gc_repo_rate_percent,
+        repo_days=repo_days,
+        day_count_basis=day_count_basis,
+    )
+
+
+def test_scanner_repo_cheap_bond_maps_to_long() -> None:
+    result = analyse_scanner_repo_funding(
+        relative_value_label="CHEAP",
+        funding=make_scanner_funding(
+            isin="IT0000002001",
+            specific_repo_rate_percent=1.00,
+            gc_repo_rate_percent=2.00,
+        ),
+    )
+
+    assert result.direction == PositionDirection.LONG
+    assert result.specialness_bp == pytest.approx(
+        100.0
+    )
+    assert result.signed_financing_impact_vs_gc_eur > 0.0
+
+
+def test_scanner_repo_rich_bond_maps_to_short() -> None:
+    result = analyse_scanner_repo_funding(
+        relative_value_label="RICH",
+        funding=make_scanner_funding(
+            isin="IT0000002002",
+            specific_repo_rate_percent=1.00,
+            gc_repo_rate_percent=2.00,
+        ),
+    )
+
+    assert result.direction == PositionDirection.SHORT
+    assert result.specialness_bp == pytest.approx(
+        100.0
+    )
+    assert result.signed_financing_impact_vs_gc_eur < 0.0
+
+
+def test_scanner_repo_rejects_on_curve_direction() -> None:
+    with pytest.raises(
+        RepoAdjustedRelativeValueValidationError,
+        match="CHEAP or RICH",
+    ):
+        analyse_scanner_repo_funding(
+            relative_value_label="ON_CURVE",
+            funding=make_scanner_funding(
+                isin="IT0000002003"
+            ),
+        )
+
+
+def test_scanner_repo_enrichment_preserves_bonds_without_repo_input() -> None:
+    scanner = pd.DataFrame(
+        [
+            {
+                "isin": "IT0000002001",
+                "relative_value_label": "CHEAP",
+                "residual_bp": 8.0,
+            },
+            {
+                "isin": "IT0000002002",
+                "relative_value_label": "RICH",
+                "residual_bp": -5.0,
+            },
+        ]
+    )
+
+    enriched = enrich_opportunity_scanner_with_repo(
+        scanner,
+        funding_inputs=[
+            make_scanner_funding(
+                isin="IT0000002001",
+                specific_repo_rate_percent=1.00,
+                gc_repo_rate_percent=2.00,
+            )
+        ],
+    )
+
+    first = enriched.loc[
+        enriched[
+            "isin"
+        ].eq(
+            "IT0000002001"
+        )
+    ].iloc[
+        0
+    ]
+
+    second = enriched.loc[
+        enriched[
+            "isin"
+        ].eq(
+            "IT0000002002"
+        )
+    ].iloc[
+        0
+    ]
+
+    assert first[
+        "repo_status"
+    ] == "AVAILABLE"
+
+    assert first[
+        "funding_effect"
+    ] == "SUPPORTIVE"
+
+    assert first[
+        "repo_direction"
+    ] == "LONG"
+
+    assert first[
+        "specialness_bp"
+    ] == pytest.approx(
+        100.0
+    )
+
+    assert second[
+        "repo_status"
+    ] == "INPUT_REQUIRED"
+
+    assert second[
+        "funding_effect"
+    ] == "INPUT_REQUIRED"
+
+    assert pd.isna(
+        second[
+            "specific_repo_rate_percent"
+        ]
+    )
+
+
+def test_scanner_repo_enrichment_marks_rich_special_bond_adverse() -> None:
+    scanner = pd.DataFrame(
+        [
+            {
+                "isin": "IT0000002002",
+                "relative_value_label": "RICH",
+            }
+        ]
+    )
+
+    enriched = enrich_opportunity_scanner_with_repo(
+        scanner,
+        funding_inputs=[
+            make_scanner_funding(
+                isin="IT0000002002",
+                specific_repo_rate_percent=1.00,
+                gc_repo_rate_percent=2.00,
+            )
+        ],
+    ).iloc[
+        0
+    ]
+
+    assert enriched[
+        "repo_direction"
+    ] == "SHORT"
+
+    assert enriched[
+        "signed_financing_impact_vs_gc_eur"
+    ] < 0.0
+
+    assert enriched[
+        "funding_effect"
+    ] == "ADVERSE"
+
+
+def test_scanner_repo_enrichment_marks_gc_neutral() -> None:
+    scanner = pd.DataFrame(
+        [
+            {
+                "isin": "IT0000002001",
+                "relative_value_label": "CHEAP",
+            }
+        ]
+    )
+
+    enriched = enrich_opportunity_scanner_with_repo(
+        scanner,
+        funding_inputs=[
+            make_scanner_funding(
+                isin="IT0000002001",
+                specific_repo_rate_percent=2.00,
+                gc_repo_rate_percent=2.00,
+            )
+        ],
+    ).iloc[
+        0
+    ]
+
+    assert enriched[
+        "specialness_bp"
+    ] == pytest.approx(
+        0.0
+    )
+
+    assert enriched[
+        "signed_financing_impact_vs_gc_eur"
+    ] == pytest.approx(
+        0.0
+    )
+
+    assert enriched[
+        "funding_effect"
+    ] == "NEUTRAL"
+
+
+def test_scanner_repo_duplicate_inputs_rejected() -> None:
+    scanner = pd.DataFrame(
+        [
+            {
+                "isin": "IT0000002001",
+                "relative_value_label": "CHEAP",
+            }
+        ]
+    )
+
+    duplicate = make_scanner_funding(
+        isin="IT0000002001"
+    )
+
+    with pytest.raises(
+        RepoAdjustedRelativeValueValidationError,
+        match="Duplicate scanner repo input",
+    ):
+        enrich_opportunity_scanner_with_repo(
+            scanner,
+            funding_inputs=[
+                duplicate,
+                duplicate,
+            ],
+        )
+
+
+def test_scanner_repo_preserves_existing_scanner_columns() -> None:
+    scanner = pd.DataFrame(
+        [
+            {
+                "isin": "IT0000002001",
+                "relative_value_label": "CHEAP",
+                "cross_sectional_z_score": 2.25,
+                "sector_z_score": 1.75,
+                "interpolation_quality": "HIGH",
+            }
+        ]
+    )
+
+    enriched = enrich_opportunity_scanner_with_repo(
+        scanner,
+        funding_inputs=[],
+    )
+
+    assert enriched.iloc[
+        0
+    ][
+        "cross_sectional_z_score"
+    ] == pytest.approx(
+        2.25
+    )
+
+    assert enriched.iloc[
+        0
+    ][
+        "sector_z_score"
+    ] == pytest.approx(
+        1.75
+    )
+
+    assert enriched.iloc[
+        0
+    ][
+        "interpolation_quality"
+    ] == "HIGH"

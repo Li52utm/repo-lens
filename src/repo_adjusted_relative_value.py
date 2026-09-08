@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import Sequence
 
+import pandas as pd
+
 from src.repo_analytics import (
     collateral_market_value,
     purchase_price_from_haircut,
@@ -832,3 +834,382 @@ def analyse_repo_adjusted_relative_value(
             - hedge_result.specialness_bp
         ),
     )
+
+@dataclass(frozen=True)
+class ScannerRepoFundingInput:
+    """
+    Explicit per-bond funding input for instrument-level opportunity scanning.
+
+    These are DESK / BROKER inputs. RepoLens never assumes a specific repo rate,
+    matched GC rate or haircut when the user has not supplied one.
+    """
+
+    isin: str
+    dirty_price_per_100: float
+    haircut_percent: float
+    specific_repo_rate_percent: float
+    gc_repo_rate_percent: float
+    repo_days: int = 30
+    day_count_basis: int = 360
+
+    def __post_init__(self) -> None:
+        normalised_isin = self.isin.strip().upper()
+
+        if len(normalised_isin) != 12 or not normalised_isin.isalnum():
+            raise RepoAdjustedRelativeValueValidationError(
+                "isin must contain exactly 12 alphanumeric characters."
+            )
+
+        if not isfinite(self.dirty_price_per_100) or self.dirty_price_per_100 <= 0.0:
+            raise RepoAdjustedRelativeValueValidationError(
+                "dirty_price_per_100 must be finite and positive."
+            )
+
+        if not isfinite(self.haircut_percent):
+            raise RepoAdjustedRelativeValueValidationError(
+                "haircut_percent must be finite."
+            )
+
+        if not -100.0 < self.haircut_percent < 100.0:
+            raise RepoAdjustedRelativeValueValidationError(
+                "haircut_percent must be greater than -100% and less than 100%."
+            )
+
+        for field_name, value in (
+            ("specific_repo_rate_percent", self.specific_repo_rate_percent),
+            ("gc_repo_rate_percent", self.gc_repo_rate_percent),
+        ):
+            if not isfinite(value):
+                raise RepoAdjustedRelativeValueValidationError(
+                    f"{field_name} must be finite."
+                )
+
+            if value <= -100.0:
+                raise RepoAdjustedRelativeValueValidationError(
+                    f"{field_name} must be greater than -100%."
+                )
+
+        if self.repo_days <= 0:
+            raise RepoAdjustedRelativeValueValidationError(
+                "repo_days must be positive."
+            )
+
+        if self.day_count_basis not in {360, 365}:
+            raise RepoAdjustedRelativeValueValidationError(
+                "day_count_basis must be 360 or 365."
+            )
+
+
+def _scanner_direction_from_relative_value_label(
+    relative_value_label: str,
+) -> PositionDirection:
+    """
+    Map cash-RV classification to the economically natural outright direction.
+
+    CHEAP -> LONG the bond
+    RICH  -> SHORT the bond
+
+    ON_CURVE has no directional cash-RV view and is therefore rejected.
+    """
+    label = relative_value_label.strip().upper()
+
+    if label == "CHEAP":
+        return PositionDirection.LONG
+
+    if label == "RICH":
+        return PositionDirection.SHORT
+
+    raise RepoAdjustedRelativeValueValidationError(
+        "Repo scanner funding overlay requires relative_value_label CHEAP or RICH."
+    )
+
+
+def analyse_scanner_repo_funding(
+    *,
+    relative_value_label: str,
+    funding: ScannerRepoFundingInput,
+    face_value_eur: float = 1_000_000.0,
+) -> RepoFundingLegResult:
+    """
+    Translate one scanner candidate into a matched specific-vs-GC funding result.
+
+    The result is normalised to €1mn face by default so every bond can be
+    compared on the same basis.
+
+    Positive signed funding impact:
+        financing improves the economics of the cash-RV direction.
+
+    Negative signed funding impact:
+        financing works against the cash-RV direction.
+    """
+    direction = _scanner_direction_from_relative_value_label(
+        relative_value_label
+    )
+
+    leg = RepoFundingLegInput(
+        isin=funding.isin,
+        direction=direction,
+        face_value_eur=face_value_eur,
+        dirty_price_per_100=funding.dirty_price_per_100,
+        haircut_percent=funding.haircut_percent,
+        specific_repo_rate_percent=funding.specific_repo_rate_percent,
+        gc_repo_rate_percent=funding.gc_repo_rate_percent,
+        repo_days=funding.repo_days,
+        day_count_basis=funding.day_count_basis,
+    )
+
+    return analyse_repo_funding_leg(
+        leg
+    )
+
+
+def enrich_opportunity_scanner_with_repo(
+    scanner: pd.DataFrame,
+    *,
+    funding_inputs: Sequence[ScannerRepoFundingInput],
+    face_value_eur: float = 1_000_000.0,
+) -> pd.DataFrame:
+    """
+    Enrich an existing instrument-level sovereign scanner with repo economics.
+
+    This function does not modify cash-RV ranking and does not fabricate repo
+    inputs. Bonds without an explicit funding input remain present with
+    repo_status='INPUT_REQUIRED' and N/A repo analytics.
+
+    Required scanner columns:
+        isin
+        relative_value_label
+
+    Added columns:
+        repo_status
+        repo_direction
+        repo_days
+        repo_day_count_basis
+        dirty_price_per_100
+        haircut_percent
+        specific_repo_rate_percent
+        gc_repo_rate_percent
+        specialness_bp
+        signed_financing_impact_vs_gc_eur
+        signed_financing_impact_per_eur_1m_face
+        funding_effect
+
+    funding_effect is descriptive:
+        SUPPORTIVE
+        ADVERSE
+        NEUTRAL
+        INPUT_REQUIRED
+    """
+    required = {
+        "isin",
+        "relative_value_label",
+    }
+
+    missing = sorted(
+        required.difference(
+            scanner.columns
+        )
+    )
+
+    if missing:
+        raise RepoAdjustedRelativeValueValidationError(
+            "Opportunity scanner is missing required columns: "
+            + ", ".join(missing)
+            + "."
+        )
+
+    if face_value_eur <= 0.0:
+        raise RepoAdjustedRelativeValueValidationError(
+            "face_value_eur must be positive."
+        )
+
+    funding_by_isin: dict[str, ScannerRepoFundingInput] = {}
+
+    for funding in funding_inputs:
+        normalised_isin = funding.isin.strip().upper()
+
+        if normalised_isin in funding_by_isin:
+            raise RepoAdjustedRelativeValueValidationError(
+                f"Duplicate scanner repo input for ISIN {normalised_isin}."
+            )
+
+        funding_by_isin[
+            normalised_isin
+        ] = funding
+
+    result = scanner.copy()
+
+    repo_status: list[str] = []
+    repo_direction: list[object] = []
+    repo_days_values: list[object] = []
+    repo_basis_values: list[object] = []
+    dirty_prices: list[float] = []
+    haircuts: list[float] = []
+    specific_rates: list[float] = []
+    gc_rates: list[float] = []
+    specialness_values: list[float] = []
+    signed_impacts: list[float] = []
+    signed_per_million: list[float] = []
+    funding_effects: list[str] = []
+
+    for _, row in result.iterrows():
+        isin = str(
+            row[
+                "isin"
+            ]
+        ).strip().upper()
+
+        funding = funding_by_isin.get(
+            isin
+        )
+
+        if funding is None:
+            repo_status.append(
+                "INPUT_REQUIRED"
+            )
+            repo_direction.append(
+                None
+            )
+            repo_days_values.append(
+                pd.NA
+            )
+            repo_basis_values.append(
+                pd.NA
+            )
+            dirty_prices.append(
+                float("nan")
+            )
+            haircuts.append(
+                float("nan")
+            )
+            specific_rates.append(
+                float("nan")
+            )
+            gc_rates.append(
+                float("nan")
+            )
+            specialness_values.append(
+                float("nan")
+            )
+            signed_impacts.append(
+                float("nan")
+            )
+            signed_per_million.append(
+                float("nan")
+            )
+            funding_effects.append(
+                "INPUT_REQUIRED"
+            )
+            continue
+
+        analysis = analyse_scanner_repo_funding(
+            relative_value_label=str(
+                row[
+                    "relative_value_label"
+                ]
+            ),
+            funding=funding,
+            face_value_eur=face_value_eur,
+        )
+
+        impact = analysis.signed_financing_impact_vs_gc_eur
+
+        if impact > 1e-8:
+            funding_effect = "SUPPORTIVE"
+        elif impact < -1e-8:
+            funding_effect = "ADVERSE"
+        else:
+            funding_effect = "NEUTRAL"
+
+        repo_status.append(
+            "AVAILABLE"
+        )
+        repo_direction.append(
+            analysis.direction.value
+        )
+        repo_days_values.append(
+            funding.repo_days
+        )
+        repo_basis_values.append(
+            funding.day_count_basis
+        )
+        dirty_prices.append(
+            funding.dirty_price_per_100
+        )
+        haircuts.append(
+            funding.haircut_percent
+        )
+        specific_rates.append(
+            funding.specific_repo_rate_percent
+        )
+        gc_rates.append(
+            funding.gc_repo_rate_percent
+        )
+        specialness_values.append(
+            analysis.specialness_bp
+        )
+        signed_impacts.append(
+            impact
+        )
+        signed_per_million.append(
+            analysis.signed_financing_impact_per_eur_1m_face
+        )
+        funding_effects.append(
+            funding_effect
+        )
+
+    result[
+        "repo_status"
+    ] = repo_status
+
+    result[
+        "repo_direction"
+    ] = repo_direction
+
+    result[
+        "repo_days"
+    ] = pd.array(
+        repo_days_values,
+        dtype="Int64",
+    )
+
+    result[
+        "repo_day_count_basis"
+    ] = pd.array(
+        repo_basis_values,
+        dtype="Int64",
+    )
+
+    result[
+        "dirty_price_per_100"
+    ] = dirty_prices
+
+    result[
+        "haircut_percent"
+    ] = haircuts
+
+    result[
+        "specific_repo_rate_percent"
+    ] = specific_rates
+
+    result[
+        "gc_repo_rate_percent"
+    ] = gc_rates
+
+    result[
+        "specialness_bp"
+    ] = specialness_values
+
+    result[
+        "signed_financing_impact_vs_gc_eur"
+    ] = signed_impacts
+
+    result[
+        "signed_financing_impact_per_eur_1m_face"
+    ] = signed_per_million
+
+    result[
+        "funding_effect"
+    ] = funding_effects
+
+    return result
